@@ -8,7 +8,7 @@ Partida::Partida(const string& dif)
     : vidas(3), maxVidas(3), ronda(1), maxRondas(10),
       puntajeTotal(0), dinero(0), zapatos(1), costoZapato(3), zapatosRestantesTienda(5),
       contadorTienda(0), tiendaDisponible(false), enTienda(false), dificultad(dif),
-      inventario(5), catalogoChapas(nullptr), cantCatalogo(9), cantTienda(3) {
+      catalogoChapas(nullptr), cantCatalogo(25), cantTienda(3) {
     for (int i = 0; i < 3; i++) tiendaActual[i] = nullptr;
 
     inicializarCatalogo();
@@ -30,12 +30,28 @@ void Partida::inicializarCatalogo() {
     catalogoChapas[0] = new ChapaZapador();
     catalogoChapas[1] = new ChapaSaqueador();
     catalogoChapas[2] = new ChapaEco();
-    catalogoChapas[3] = new ChapaMedico();
-    catalogoChapas[4] = new ChapaTactica();
-    catalogoChapas[5] = new ChapaBlindaje();
-    catalogoChapas[6] = new ChapaBlindajePesado();
-    catalogoChapas[7] = new ChapaFenix();
-    catalogoChapas[8] = new ChapaSuministros();
+    catalogoChapas[3] = new ChapaExplorador();
+    catalogoChapas[4] = new ChapaChatarrero();
+    catalogoChapas[5] = new ChapaMedico();
+    catalogoChapas[6] = new ChapaTactica();
+    catalogoChapas[7] = new ChapaBotin();
+    catalogoChapas[8] = new ChapaAhorrista();
+    catalogoChapas[9] = new ChapaBlindaje();
+    catalogoChapas[10] = new ChapaParacaidas();
+    catalogoChapas[11] = new ChapaCuartel();
+    catalogoChapas[12] = new ChapaBlindajePesado();
+    catalogoChapas[13] = new ChapaFenix();
+    catalogoChapas[14] = new ChapaSuministros();
+    catalogoChapas[15] = new ChapaVigilante();
+    catalogoChapas[16] = new ChapaRacion();
+    catalogoChapas[17] = new ChapaMochila();
+    catalogoChapas[18] = new ChapaFrancotirador();
+    catalogoChapas[19] = new ChapaEnfermero();
+    catalogoChapas[20] = new ChapaBrigada();
+    catalogoChapas[21] = new ChapaCasco();
+    catalogoChapas[22] = new ChapaArsenal();
+    catalogoChapas[23] = new ChapaGeneral();
+    catalogoChapas[24] = new ChapaMidas();
 }
 
 void Partida::generarTienda() {
@@ -50,7 +66,16 @@ void Partida::generarTienda() {
 
     cantTienda = (disponibles < 3) ? disponibles : 3;
     int elegidas = 0;
+    int intentos = 0;
+
     while (elegidas < cantTienda) {
+        intentos++;
+        int tirada = rand() % 100;
+        string rarezaBuscada = "Comun";
+        if (tirada >= 95) rarezaBuscada = "Legendaria";      // 5%
+        else if (tirada >= 83) rarezaBuscada = "Epica";      // 12%
+        else if (tirada >= 55) rarezaBuscada = "Rara";       // 28%
+
         int idx = rand() % cantCatalogo;
         Chapa* candidata = catalogoChapas[idx];
 
@@ -64,6 +89,9 @@ void Partida::generarTienda() {
             }
         }
         if (repetida) continue;
+
+        // si ya intento muchas veces, acepta cualquier rareza disponible
+        if (intentos < 120 && candidata->getRareza() != rarezaBuscada) continue;
 
         tiendaActual[elegidas] = candidata;
         elegidas++;
@@ -112,7 +140,7 @@ bool Partida::jugarCelda(int fila, int col) {
     if (resultado == -1) {
         bool bloqueada = false;
         for (int i = 0; i < inventario.getCantidad(); i++) {
-            if (inventario.getChapa(i)->alPisarMina(vidas)) {
+            if (inventario.getChapa(i)->alPisarMina(vidas, zapatos, dinero)) {
                 bloqueada = true;
                 break;
             }
@@ -353,7 +381,7 @@ void Partida::abrirTienda() {
         zapatosRestantesTienda = 5;
         generarTienda();
         for (int i = 0; i < inventario.getCantidad(); i++) {
-            inventario.getChapa(i)->alAbrirTienda(zapatos);
+            inventario.getChapa(i)->alAbrirTienda(zapatos, dinero);
         }
         enTienda = true;
     }

@@ -5,12 +5,12 @@ using namespace std;
 
 class Inventario {
 private:
-    Chapa** chapas;
+    static const int MAX_CAPACIDAD = 5;
+    Chapa* chapas[MAX_CAPACIDAD];
     int cantidad;
-    int capacidad;
 
 public:
-    Inventario(int capacidad = 5);
+    Inventario();
     ~Inventario();
 
     bool agregar(Chapa* chapa);

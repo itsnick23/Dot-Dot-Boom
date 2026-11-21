@@ -95,7 +95,7 @@ bool Tablero::tableroConexo(int inicioFila, int inicioCol) const {
 
 void Tablero::colocarMinas(int seguraFila, int seguraCol) {
     random_device rd;
-    mt19937 gen(rd() ^ static_cast<unsigned int>(time(nullptr)));
+    mt19937 gen(rd() ^ (unsigned int)time(nullptr));
     uniform_int_distribution<int> distFila(0, filas - 1);
     uniform_int_distribution<int> distCol(0, columnas - 1);
 

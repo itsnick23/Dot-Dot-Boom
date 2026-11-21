@@ -1,17 +1,14 @@
 #include "Inventario.h"
 
-Inventario::Inventario(int cap)
-    : chapas(nullptr), cantidad(0), capacidad(cap < 1 ? 5 : cap) {
-    chapas = new Chapa*[capacidad];
-    for (int i = 0; i < capacidad; i++) {
+Inventario::Inventario() {
+    cantidad = 0;
+    for (int i = 0; i < MAX_CAPACIDAD; i++) {
         chapas[i] = nullptr;
     }
 }
 
 Inventario::~Inventario() {
     limpiar();
-    delete[] chapas;
-    chapas = nullptr;
 }
 
 bool Inventario::agregar(Chapa* chapa) {
@@ -43,7 +40,7 @@ void Inventario::limpiar() {
     cantidad = 0;
 }
 
-bool Inventario::estaLleno() const { return cantidad >= capacidad; }
+bool Inventario::estaLleno() const { return cantidad >= MAX_CAPACIDAD; }
 
 bool Inventario::contiene(const Chapa* chapa) const {
     if (chapa == nullptr) return false;
@@ -54,7 +51,7 @@ bool Inventario::contiene(const Chapa* chapa) const {
 }
 
 int Inventario::getCantidad() const { return cantidad; }
-int Inventario::getCapacidad() const { return capacidad; }
+int Inventario::getCapacidad() const { return MAX_CAPACIDAD; }
 
 Chapa* Inventario::getChapa(int indice) const {
     if (indice < 0 || indice >= cantidad) return nullptr;
