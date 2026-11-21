@@ -14,8 +14,11 @@ public:
     Chapa(int id, const string& nombre, const string& descripcion, int costo, const string& rareza);
     virtual ~Chapa();
 
-    virtual void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) = 0;
+    virtual void alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero);
+    virtual void alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada);
     virtual bool alPisarMina(int& vidas);
+    virtual void alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos);
+    virtual void alAbrirTienda(int& zapatos);
     virtual void reiniciarRonda();
     virtual Chapa* clonar() const = 0;
 
@@ -28,13 +31,38 @@ public:
     bool operator==(const Chapa& otra) const;
 };
 
-class ChapaArtilleria : public Chapa {
-private:
-    float multExtra;
-
+class ChapaZapador : public Chapa {
 public:
-    ChapaArtilleria();
-    void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) override;
+    ChapaZapador();
+    void alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero) override;
+    Chapa* clonar() const override;
+};
+
+class ChapaSaqueador : public Chapa {
+public:
+    ChapaSaqueador();
+    void alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) override;
+    Chapa* clonar() const override;
+};
+
+class ChapaEco : public Chapa {
+public:
+    ChapaEco();
+    void alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) override;
+    Chapa* clonar() const override;
+};
+
+class ChapaMedico : public Chapa {
+public:
+    ChapaMedico();
+    void alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) override;
+    Chapa* clonar() const override;
+};
+
+class ChapaTactica : public Chapa {
+public:
+    ChapaTactica();
+    void alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) override;
     Chapa* clonar() const override;
 };
 
@@ -44,58 +72,35 @@ private:
 
 public:
     ChapaBlindaje();
-    void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) override;
     bool alPisarMina(int& vidas) override;
     void reiniciarRonda() override;
     Chapa* clonar() const override;
 };
 
-class ChapaReconocimiento : public Chapa {
+class ChapaBlindajePesado : public Chapa {
 private:
-    int fichasExtra;
+    int cargas;
 
 public:
-    ChapaReconocimiento();
-    void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) override;
+    ChapaBlindajePesado();
+    bool alPisarMina(int& vidas) override;
+    void reiniciarRonda() override;
     Chapa* clonar() const override;
 };
 
-class ChapaFrancotirador : public Chapa {
+class ChapaFenix : public Chapa {
 private:
-    int fichasExtra;
+    bool usada;
 
 public:
-    ChapaFrancotirador();
-    void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) override;
+    ChapaFenix();
+    bool alPisarMina(int& vidas) override;
     Chapa* clonar() const override;
 };
 
-class ChapaMortero : public Chapa {
-private:
-    float multExtra;
-
+class ChapaSuministros : public Chapa {
 public:
-    ChapaMortero();
-    void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) override;
-    Chapa* clonar() const override;
-};
-
-class ChapaVeterano : public Chapa {
-private:
-    int fichasFijas;
-
-public:
-    ChapaVeterano();
-    void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) override;
-    Chapa* clonar() const override;
-};
-
-class ChapaComandante : public Chapa {
-private:
-    float factorMult;
-
-public:
-    ChapaComandante();
-    void alDestapar(int& fichas, float& mult, int minasCerca, bool esCascada) override;
+    ChapaSuministros();
+    void alAbrirTienda(int& zapatos) override;
     Chapa* clonar() const override;
 };

@@ -3,6 +3,7 @@
 #include <string>
 #include "Tablero.h"
 #include "Chapa.h"
+#include "Inventario.h"
 using namespace std;
 
 struct RegistroPuntaje {
@@ -26,22 +27,17 @@ private:
     int maxVidas;
     int ronda;
     int maxRondas;
-    int fichas;
-    float mult;
-    int puntajeRonda;
-    int metaRonda;
     int puntajeTotal;
     int dinero;
     int zapatos;
     int costoZapato;
+    int zapatosRestantesTienda;
     int contadorTienda;
     bool tiendaDisponible;
     bool enTienda;
     string dificultad;
 
-    Chapa** chapasEquipadas;
-    int cantChapas;
-    int maxChapas;
+    Inventario inventario;
 
     Chapa** catalogoChapas;
     int cantCatalogo;
@@ -51,7 +47,6 @@ private:
 
     void inicializarCatalogo();
     void generarTienda();
-    void limpiarChapas();
 
 public:
     Partida(const string& dificultad = "Normal");
@@ -67,6 +62,7 @@ public:
     void cobrarRonda();
 
     bool equiparChapa(Chapa* chapa);
+    bool venderChapa(int indice);
     bool comprarChapa(int idChapa);
     bool comprarZapato();
     Chapa* buscarChapa(int id) const;
@@ -89,16 +85,14 @@ public:
     int getVidas() const;
     int getRonda() const;
     int getMaxRondas() const;
-    int getFichas() const;
-    float getMult() const;
-    int getPuntajeRonda() const;
-    int getMetaRonda() const;
     int getPuntajeTotal() const;
     int getDinero() const;
     int getZapatos() const;
     int getCostoZapato() const;
+    int getZapatosRestantesTienda() const;
     int getContadorTienda() const;
     const Tablero& getTablero() const;
+    const Inventario& getInventario() const;
 
     int getCantChapas() const;
     Chapa* getChapaEquipada(int indice) const;

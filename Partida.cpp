@@ -5,13 +5,10 @@
 #include <cstdlib>
 
 Partida::Partida(const string& dif)
-    : vidas(3), maxVidas(3), ronda(1), maxRondas(10), fichas(0), mult(1.0f),
-      puntajeRonda(0), metaRonda(150), puntajeTotal(0), dinero(0), zapatos(1), costoZapato(3),
+    : vidas(3), maxVidas(3), ronda(1), maxRondas(10),
+      puntajeTotal(0), dinero(0), zapatos(1), costoZapato(3), zapatosRestantesTienda(5),
       contadorTienda(0), tiendaDisponible(false), enTienda(false), dificultad(dif),
-      chapasEquipadas(nullptr), cantChapas(0), maxChapas(5),
-      catalogoChapas(nullptr), cantCatalogo(7), cantTienda(3) {
-    chapasEquipadas = new Chapa*[maxChapas];
-    for (int i = 0; i < maxChapas; i++) chapasEquipadas[i] = nullptr;
+      inventario(5), catalogoChapas(nullptr), cantCatalogo(9), cantTienda(3) {
     for (int i = 0; i < 3; i++) tiendaActual[i] = nullptr;
 
     inicializarCatalogo();
@@ -19,10 +16,6 @@ Partida::Partida(const string& dif)
 }
 
 Partida::~Partida() {
-    limpiarChapas();
-    delete[] chapasEquipadas;
-    chapasEquipadas = nullptr;
-
     if (catalogoChapas != nullptr) {
         for (int i = 0; i < cantCatalogo; i++) {
             delete catalogoChapas[i];
@@ -34,20 +27,34 @@ Partida::~Partida() {
 
 void Partida::inicializarCatalogo() {
     catalogoChapas = new Chapa*[cantCatalogo];
-    catalogoChapas[0] = new ChapaArtilleria();
-    catalogoChapas[1] = new ChapaBlindaje();
-    catalogoChapas[2] = new ChapaReconocimiento();
-    catalogoChapas[3] = new ChapaFrancotirador();
-    catalogoChapas[4] = new ChapaMortero();
-    catalogoChapas[5] = new ChapaVeterano();
-    catalogoChapas[6] = new ChapaComandante();
+    catalogoChapas[0] = new ChapaZapador();
+    catalogoChapas[1] = new ChapaSaqueador();
+    catalogoChapas[2] = new ChapaEco();
+    catalogoChapas[3] = new ChapaMedico();
+    catalogoChapas[4] = new ChapaTactica();
+    catalogoChapas[5] = new ChapaBlindaje();
+    catalogoChapas[6] = new ChapaBlindajePesado();
+    catalogoChapas[7] = new ChapaFenix();
+    catalogoChapas[8] = new ChapaSuministros();
 }
 
 void Partida::generarTienda() {
+    for (int i = 0; i < 3; i++) tiendaActual[i] = nullptr;
+
+    int disponibles = 0;
+    for (int i = 0; i < cantCatalogo; i++) {
+        if (!inventario.contiene(catalogoChapas[i])) {
+            disponibles++;
+        }
+    }
+
+    cantTienda = (disponibles < 3) ? disponibles : 3;
     int elegidas = 0;
     while (elegidas < cantTienda) {
         int idx = rand() % cantCatalogo;
         Chapa* candidata = catalogoChapas[idx];
+
+        if (inventario.contiene(candidata)) continue;
 
         bool repetida = false;
         for (int i = 0; i < elegidas; i++) {
@@ -63,14 +70,6 @@ void Partida::generarTienda() {
     }
 }
 
-void Partida::limpiarChapas() {
-    for (int i = 0; i < cantChapas; i++) {
-        delete chapasEquipadas[i];
-        chapasEquipadas[i] = nullptr;
-    }
-    cantChapas = 0;
-}
-
 void Partida::nuevaPartida(const string& dif) {
     dificultad = dif;
     vidas = maxVidas;
@@ -81,18 +80,13 @@ void Partida::nuevaPartida(const string& dif) {
     contadorTienda = 0;
     tiendaDisponible = false;
     enTienda = false;
-    limpiarChapas();
+    inventario.limpiar();
     iniciarSiguienteRonda();
 }
 
 void Partida::iniciarSiguienteRonda() {
-    fichas = 0;
-    mult = 1.0f;
-    puntajeRonda = 0;
-    metaRonda = 120 + (ronda - 1) * 90;
-
     int minas = 7 + (ronda - 1) * 2;
-    int tam = 5 + (ronda - 1);
+    int tam = 5 + (ronda - 1) * 2;
     if (dificultad == "Dificil") {
         minas += 2;
     } else if (dificultad == "Facil" && minas > 5) {
@@ -100,8 +94,9 @@ void Partida::iniciarSiguienteRonda() {
     }
 
     tablero.configurar(tam, tam, minas);
-    for (int i = 0; i < cantChapas; i++) {
-        chapasEquipadas[i]->reiniciarRonda();
+    for (int i = 0; i < inventario.getCantidad(); i++) {
+        inventario.getChapa(i)->reiniciarRonda();
+        inventario.getChapa(i)->alIniciarRonda(vidas, maxVidas, zapatos, dinero);
     }
 }
 
@@ -116,8 +111,8 @@ bool Partida::jugarCelda(int fila, int col) {
 
     if (resultado == -1) {
         bool bloqueada = false;
-        for (int i = 0; i < cantChapas; i++) {
-            if (chapasEquipadas[i]->alPisarMina(vidas)) {
+        for (int i = 0; i < inventario.getCantidad(); i++) {
+            if (inventario.getChapa(i)->alPisarMina(vidas)) {
                 bloqueada = true;
                 break;
             }
@@ -128,22 +123,14 @@ bool Partida::jugarCelda(int fila, int col) {
         return true;
     }
 
-    int fichasGanadas = 10 + (minasCerca * 5);
-    fichas += fichasGanadas;
-
-    for (int i = 0; i < cantChapas; i++) {
-        chapasEquipadas[i]->alDestapar(fichas, mult, minasCerca, false);
-        for (int j = 0; j < cascada; j++) {
-            chapasEquipadas[i]->alDestapar(fichas, mult, 0, true);
-        }
-    }
-
-    if (cascada > 0) {
-        fichas += cascada * 5;
-    }
-
     int resueltas = 1 + cascada;
     dinero += resueltas;
+    puntajeTotal += resueltas * 10;
+
+    for (int i = 0; i < inventario.getCantidad(); i++) {
+        inventario.getChapa(i)->alDestapar(dinero, zapatos, minasCerca, cascada);
+    }
+
     if (!tiendaDisponible) {
         contadorTienda += resueltas;
         if (contadorTienda >= 5) {
@@ -151,7 +138,6 @@ bool Partida::jugarCelda(int fila, int col) {
         }
     }
 
-    puntajeRonda = static_cast<int>(fichas * mult + 0.5f);
     return true;
 }
 
@@ -159,25 +145,26 @@ int Partida::usarZapato(int fila, int col) {
     if (estaTerminada() || enTienda || zapatos <= 0) return -1;
 
     int minasCerca = 0;
-    int res = tablero.tirarZapato(fila, col, minasCerca);
+    int seguras = 0;
+    int res = tablero.tirarZapato(fila, col, minasCerca, seguras);
     if (res == -1) return -1;
 
     zapatos--;
 
-    if (res == 0) {
-        dinero += 1;
+    if (seguras > 0) {
+        dinero += seguras;
+        puntajeTotal += seguras * 10;
         if (!tiendaDisponible) {
-            contadorTienda += 1;
+            contadorTienda += seguras;
             if (contadorTienda >= 5) {
                 tiendaDisponible = true;
             }
         }
-        int fichasGanadas = 10 + (minasCerca * 5);
-        fichas += fichasGanadas;
-        for (int i = 0; i < cantChapas; i++) {
-            chapasEquipadas[i]->alDestapar(fichas, mult, minasCerca, false);
+        if (res == 0) {
+            for (int i = 0; i < inventario.getCantidad(); i++) {
+                inventario.getChapa(i)->alDestapar(dinero, zapatos, minasCerca, 0);
+            }
         }
-        puntajeRonda = static_cast<int>(fichas * mult + 0.5f);
     }
 
     return res;
@@ -190,7 +177,10 @@ void Partida::marcarCelda(int fila, int col) {
 
 void Partida::cobrarRonda() {
     if (!rondaSuperada() || partidaGanada()) return;
-    puntajeTotal += puntajeRonda;
+    puntajeTotal += ronda * 100;
+    for (int i = 0; i < inventario.getCantidad(); i++) {
+        inventario.getChapa(i)->alSuperarRonda(vidas, maxVidas, dinero, zapatos);
+    }
     ronda++;
     if (ronda <= maxRondas) {
         iniciarSiguienteRonda();
@@ -198,23 +188,27 @@ void Partida::cobrarRonda() {
 }
 
 bool Partida::equiparChapa(Chapa* chapa) {
-    if (chapa == nullptr) return false;
-    if (cantChapas >= maxChapas) return false;
+    return inventario.agregar(chapa);
+}
 
-    for (int i = 0; i < cantChapas; i++) {
-        if (*chapasEquipadas[i] == *chapa) return false;
+bool Partida::venderChapa(int indice) {
+    Chapa* c = inventario.getChapa(indice);
+    if (c == nullptr) return false;
+    int reembolso = c->getCosto() / 2;
+    if (inventario.quitar(indice)) {
+        dinero += reembolso;
+        return true;
     }
-
-    chapasEquipadas[cantChapas] = chapa->clonar();
-    cantChapas++;
-    return true;
+    return false;
 }
 
 bool Partida::comprarChapa(int idChapa) {
+    int slot = -1;
     Chapa* encontrada = nullptr;
     for (int i = 0; i < cantTienda; i++) {
         if (tiendaActual[i] != nullptr && tiendaActual[i]->getId() == idChapa) {
             encontrada = tiendaActual[i];
+            slot = i;
             break;
         }
     }
@@ -223,15 +217,18 @@ bool Partida::comprarChapa(int idChapa) {
 
     if (equiparChapa(encontrada)) {
         dinero -= encontrada->getCosto();
+        tiendaActual[slot] = nullptr;
         return true;
     }
     return false;
 }
 
 bool Partida::comprarZapato() {
+    if (zapatosRestantesTienda <= 0) return false;
     if (dinero < costoZapato) return false;
     dinero -= costoZapato;
     zapatos++;
+    zapatosRestantesTienda--;
     return true;
 }
 
@@ -254,7 +251,7 @@ bool Partida::guardarPuntaje(const string& rutaArchivo, const string& nombreJuga
     if (!archivo.is_open()) return false;
 
     string limpio = nombreJugador.empty() ? "Soldado" : nombreJugador;
-    archivo << limpio << " " << ronda << " " << (puntajeTotal + puntajeRonda) << "\n";
+    archivo << limpio << " " << ronda << " " << puntajeTotal << "\n";
     archivo.close();
     return true;
 }
@@ -298,9 +295,9 @@ bool Partida::guardarPartida(const string& rutaArchivo) const {
     archivo << dificultad << "\n";
     archivo << ronda << " " << vidas << " " << dinero << " " << zapatos << " "
             << puntajeTotal << " " << contadorTienda << " " << (tiendaDisponible ? 1 : 0) << "\n";
-    archivo << cantChapas;
-    for (int i = 0; i < cantChapas; i++) {
-        archivo << " " << chapasEquipadas[i]->getId();
+    archivo << inventario.getCantidad();
+    for (int i = 0; i < inventario.getCantidad(); i++) {
+        archivo << " " << inventario.getChapa(i)->getId();
     }
     archivo << "\n";
     archivo.close();
@@ -353,7 +350,11 @@ bool Partida::estaEnTienda() const { return enTienda; }
 
 void Partida::abrirTienda() {
     if (tiendaDisponible) {
+        zapatosRestantesTienda = 5;
         generarTienda();
+        for (int i = 0; i < inventario.getCantidad(); i++) {
+            inventario.getChapa(i)->alAbrirTienda(zapatos);
+        }
         enTienda = true;
     }
 }
@@ -367,21 +368,18 @@ void Partida::cerrarTienda() {
 int Partida::getVidas() const { return vidas; }
 int Partida::getRonda() const { return ronda; }
 int Partida::getMaxRondas() const { return maxRondas; }
-int Partida::getFichas() const { return fichas; }
-float Partida::getMult() const { return mult; }
-int Partida::getPuntajeRonda() const { return puntajeRonda; }
-int Partida::getMetaRonda() const { return metaRonda; }
 int Partida::getPuntajeTotal() const { return puntajeTotal; }
 int Partida::getDinero() const { return dinero; }
 int Partida::getZapatos() const { return zapatos; }
 int Partida::getCostoZapato() const { return costoZapato; }
+int Partida::getZapatosRestantesTienda() const { return zapatosRestantesTienda; }
 int Partida::getContadorTienda() const { return contadorTienda; }
 const Tablero& Partida::getTablero() const { return tablero; }
+const Inventario& Partida::getInventario() const { return inventario; }
 
-int Partida::getCantChapas() const { return cantChapas; }
+int Partida::getCantChapas() const { return inventario.getCantidad(); }
 Chapa* Partida::getChapaEquipada(int indice) const {
-    if (indice < 0 || indice >= cantChapas) return nullptr;
-    return chapasEquipadas[indice];
+    return inventario.getChapa(indice);
 }
 
 int Partida::getCantCatalogo() const { return cantCatalogo; }

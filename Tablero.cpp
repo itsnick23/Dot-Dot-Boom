@@ -206,8 +206,9 @@ int Tablero::destapar(Coord pos, int& ultimaMinaCerca, int& celdasCascada) {
     return destapar(pos.fila, pos.col, ultimaMinaCerca, celdasCascada);
 }
 
-int Tablero::tirarZapato(int fila, int col, int& minasCerca) {
+int Tablero::tirarZapato(int fila, int col, int& minasCerca, int& segurasReveladas) {
     minasCerca = 0;
+    segurasReveladas = 0;
     if (!esValida(fila, col)) return -1;
     if (celdas[fila][col].estaRevelada()) return -1;
 
@@ -220,8 +221,14 @@ int Tablero::tirarZapato(int fila, int col, int& minasCerca) {
             for (int dc = -1; dc <= 1; dc++) {
                 int nf = fila + df;
                 int nc = col + dc;
-                if (esValida(nf, nc)) {
-                    celdas[nf][nc].marcar();
+                if (!esValida(nf, nc) || celdas[nf][nc].estaRevelada()) continue;
+
+                if (celdas[nf][nc].estaMarcada()) {
+                    celdas[nf][nc].alternarMarca();
+                }
+                if (celdas[nf][nc].revelar() && !celdas[nf][nc].esMina()) {
+                    celdasSegurasRestantes--;
+                    segurasReveladas++;
                 }
             }
         }
@@ -234,6 +241,7 @@ int Tablero::tirarZapato(int fila, int col, int& minasCerca) {
     }
     celdas[fila][col].revelar();
     celdasSegurasRestantes--;
+    segurasReveladas = 1;
     minasCerca = celdas[fila][col].getMinasCerca();
     return 0;
 }
