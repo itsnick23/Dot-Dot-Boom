@@ -7,11 +7,11 @@ Chapa::Chapa(int id, const string& nombre, const string& descripcion, int costo,
 
 Chapa::~Chapa() {}
 
-void Chapa::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero) {}
-void Chapa::alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) {}
-bool Chapa::alPisarMina(int& vidas, int& zapatos, int& dinero) { return false; }
-void Chapa::alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) {}
-void Chapa::alAbrirTienda(int& zapatos, int& dinero) {}
+void Chapa::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, float& dinero) {}
+void Chapa::alDestapar(float& dinero, int& zapatos, int minasCerca, int cantCascada) {}
+bool Chapa::alPisarMina(int& vidas, int& zapatos, float& dinero) { return false; }
+void Chapa::alSuperarRonda(int& vidas, int maxVidas, float& dinero, int& zapatos) {}
+void Chapa::alAbrirTienda(int& zapatos, float& dinero) {}
 void Chapa::reiniciarRonda() {}
 
 int Chapa::getId() const { return id; }
@@ -28,7 +28,7 @@ ChapaZapador::ChapaZapador()
     : Chapa(1, "Chapa Zapador", "+1 Zapato gratis al inicio de cada ronda", 4, "Comun") {
 }
 
-void ChapaZapador::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero) {
+void ChapaZapador::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, float& dinero) {
     zapatos += 1;
 }
 
@@ -38,9 +38,9 @@ ChapaSaqueador::ChapaSaqueador()
     : Chapa(2, "Chapa Saqueador", "+1 Moneda extra al abrir celda con 2 o mas minas cerca", 4, "Comun") {
 }
 
-void ChapaSaqueador::alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) {
+void ChapaSaqueador::alDestapar(float& dinero, int& zapatos, int minasCerca, int cantCascada) {
     if (minasCerca >= 2) {
-        dinero += 1;
+        dinero += 1.0f;
     }
 }
 
@@ -50,9 +50,9 @@ ChapaEco::ChapaEco()
     : Chapa(3, "Chapa Eco", "+1 Moneda extra cada 3 casillas abiertas en cascada", 5, "Comun") {
 }
 
-void ChapaEco::alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) {
+void ChapaEco::alDestapar(float& dinero, int& zapatos, int minasCerca, int cantCascada) {
     if (cantCascada >= 3) {
-        dinero += cantCascada / 3;
+        dinero += (float)(cantCascada / 3);
     }
 }
 
@@ -62,9 +62,9 @@ ChapaExplorador::ChapaExplorador()
     : Chapa(4, "Chapa Explorador", "+1 Moneda extra al abrir una celda despejada (0 minas)", 4, "Comun") {
 }
 
-void ChapaExplorador::alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) {
+void ChapaExplorador::alDestapar(float& dinero, int& zapatos, int minasCerca, int cantCascada) {
     if (minasCerca == 0) {
-        dinero += 1;
+        dinero += 1.0f;
     }
 }
 
@@ -74,8 +74,8 @@ ChapaChatarrero::ChapaChatarrero()
     : Chapa(5, "Chapa Chatarrero", "+2 Monedas gratis cada vez que abres la tienda", 4, "Comun") {
 }
 
-void ChapaChatarrero::alAbrirTienda(int& zapatos, int& dinero) {
-    dinero += 2;
+void ChapaChatarrero::alAbrirTienda(int& zapatos, float& dinero) {
+    dinero += 2.0f;
 }
 
 Chapa* ChapaChatarrero::clonar() const { return new ChapaChatarrero(*this); }
@@ -84,7 +84,7 @@ ChapaMedico::ChapaMedico()
     : Chapa(6, "Chapa Medico", "Recupera +1 Vida al superar cada ronda", 6, "Rara") {
 }
 
-void ChapaMedico::alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) {
+void ChapaMedico::alSuperarRonda(int& vidas, int maxVidas, float& dinero, int& zapatos) {
     if (vidas < maxVidas) {
         vidas += 1;
     }
@@ -96,8 +96,8 @@ ChapaTactica::ChapaTactica()
     : Chapa(7, "Chapa Tactica", "+5 Monedas extra al superar cada ronda", 5, "Rara") {
 }
 
-void ChapaTactica::alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) {
-    dinero += 5;
+void ChapaTactica::alSuperarRonda(int& vidas, int maxVidas, float& dinero, int& zapatos) {
+    dinero += 5.0f;
 }
 
 Chapa* ChapaTactica::clonar() const { return new ChapaTactica(*this); }
@@ -106,7 +106,7 @@ ChapaBotin::ChapaBotin()
     : Chapa(8, "Chapa Botin", "+1 Zapato gratis al superar cada ronda", 6, "Rara") {
 }
 
-void ChapaBotin::alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) {
+void ChapaBotin::alSuperarRonda(int& vidas, int maxVidas, float& dinero, int& zapatos) {
     zapatos += 1;
 }
 
@@ -116,10 +116,10 @@ ChapaAhorrista::ChapaAhorrista()
     : Chapa(9, "Chapa Ahorrista", "+1 Moneda por cada 5 que tengas al superar ronda (max +5)", 6, "Rara") {
 }
 
-void ChapaAhorrista::alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) {
-    int bono = dinero / 5;
+void ChapaAhorrista::alSuperarRonda(int& vidas, int maxVidas, float& dinero, int& zapatos) {
+    int bono = (int)dinero / 5;
     if (bono > 5) bono = 5;
-    dinero += bono;
+    dinero += (float)bono;
 }
 
 Chapa* ChapaAhorrista::clonar() const { return new ChapaAhorrista(*this); }
@@ -128,7 +128,7 @@ ChapaBlindaje::ChapaBlindaje()
     : Chapa(10, "Chapa Kevlar", "Bloquea la primera mina de cada ronda", 6, "Epica"), escudoActivo(true) {
 }
 
-bool ChapaBlindaje::alPisarMina(int& vidas, int& zapatos, int& dinero) {
+bool ChapaBlindaje::alPisarMina(int& vidas, int& zapatos, float& dinero) {
     if (escudoActivo) {
         escudoActivo = false;
         return true;
@@ -146,9 +146,9 @@ ChapaParacaidas::ChapaParacaidas()
     : Chapa(11, "Chapa Paracaidas", "Si pisas mina y pierdes vida, ganas +1 Zapato y +2 Monedas", 7, "Epica") {
 }
 
-bool ChapaParacaidas::alPisarMina(int& vidas, int& zapatos, int& dinero) {
+bool ChapaParacaidas::alPisarMina(int& vidas, int& zapatos, float& dinero) {
     zapatos += 1;
-    dinero += 2;
+    dinero += 2.0f;
     return false;
 }
 
@@ -158,9 +158,9 @@ ChapaCuartel::ChapaCuartel()
     : Chapa(12, "Chapa Cuartel", "+1 Zapato y +3 Monedas al inicio de cada ronda", 7, "Epica") {
 }
 
-void ChapaCuartel::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero) {
+void ChapaCuartel::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, float& dinero) {
     zapatos += 1;
-    dinero += 3;
+    dinero += 3.0f;
 }
 
 Chapa* ChapaCuartel::clonar() const { return new ChapaCuartel(*this); }
@@ -169,7 +169,7 @@ ChapaBlindajePesado::ChapaBlindajePesado()
     : Chapa(13, "Chapa Blindaje Pesado", "Bloquea hasta 2 minas en cada ronda", 9, "Legendaria"), cargas(2) {
 }
 
-bool ChapaBlindajePesado::alPisarMina(int& vidas, int& zapatos, int& dinero) {
+bool ChapaBlindajePesado::alPisarMina(int& vidas, int& zapatos, float& dinero) {
     if (cargas > 0) {
         cargas--;
         return true;
@@ -187,7 +187,7 @@ ChapaFenix::ChapaFenix()
     : Chapa(14, "Chapa Fenix", "Evita la muerte una vez en toda la partida", 10, "Legendaria"), usada(false) {
 }
 
-bool ChapaFenix::alPisarMina(int& vidas, int& zapatos, int& dinero) {
+bool ChapaFenix::alPisarMina(int& vidas, int& zapatos, float& dinero) {
     if (!usada && vidas <= 1) {
         usada = true;
         return true;
@@ -201,7 +201,7 @@ ChapaSuministros::ChapaSuministros()
     : Chapa(15, "Chapa Suministros", "+2 Zapatos gratis cada vez que abres la tienda", 9, "Legendaria") {
 }
 
-void ChapaSuministros::alAbrirTienda(int& zapatos, int& dinero) {
+void ChapaSuministros::alAbrirTienda(int& zapatos, float& dinero) {
     zapatos += 2;
 }
 
@@ -211,9 +211,9 @@ ChapaVigilante::ChapaVigilante()
     : Chapa(16, "Chapa Vigilante", "+1 Moneda extra al abrir celda con 1 mina cerca", 4, "Comun") {
 }
 
-void ChapaVigilante::alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) {
+void ChapaVigilante::alDestapar(float& dinero, int& zapatos, int minasCerca, int cantCascada) {
     if (minasCerca == 1) {
-        dinero += 1;
+        dinero += 1.0f;
     }
 }
 
@@ -223,8 +223,8 @@ ChapaRacion::ChapaRacion()
     : Chapa(17, "Chapa Racion", "+3 Monedas al inicio de cada ronda", 4, "Comun") {
 }
 
-void ChapaRacion::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero) {
-    dinero += 3;
+void ChapaRacion::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, float& dinero) {
+    dinero += 3.0f;
 }
 
 Chapa* ChapaRacion::clonar() const { return new ChapaRacion(*this); }
@@ -233,7 +233,7 @@ ChapaMochila::ChapaMochila()
     : Chapa(18, "Chapa Mochila", "+1 Zapato gratis cada vez que abres la tienda", 5, "Comun") {
 }
 
-void ChapaMochila::alAbrirTienda(int& zapatos, int& dinero) {
+void ChapaMochila::alAbrirTienda(int& zapatos, float& dinero) {
     zapatos += 1;
 }
 
@@ -243,9 +243,9 @@ ChapaFrancotirador::ChapaFrancotirador()
     : Chapa(19, "Chapa Francotirador", "+2 Monedas extra al abrir celda con 3 o mas minas cerca", 5, "Rara") {
 }
 
-void ChapaFrancotirador::alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) {
+void ChapaFrancotirador::alDestapar(float& dinero, int& zapatos, int minasCerca, int cantCascada) {
     if (minasCerca >= 3) {
-        dinero += 2;
+        dinero += 2.0f;
     }
 }
 
@@ -255,7 +255,7 @@ ChapaEnfermero::ChapaEnfermero()
     : Chapa(20, "Chapa Enfermero", "Si terminas la ronda con 1 vida, te cura a 2 vidas", 6, "Rara") {
 }
 
-void ChapaEnfermero::alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) {
+void ChapaEnfermero::alSuperarRonda(int& vidas, int maxVidas, float& dinero, int& zapatos) {
     if (vidas == 1 && vidas < maxVidas) {
         vidas += 1;
     }
@@ -267,7 +267,7 @@ ChapaBrigada::ChapaBrigada()
     : Chapa(21, "Chapa Brigada", "Si empiezas la ronda sin zapatos, te da +1 Zapato", 5, "Rara") {
 }
 
-void ChapaBrigada::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero) {
+void ChapaBrigada::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, float& dinero) {
     if (zapatos == 0) {
         zapatos += 1;
     }
@@ -279,7 +279,7 @@ ChapaCasco::ChapaCasco()
     : Chapa(22, "Chapa Casco", "50% de probabilidad de bloquear cualquier mina", 7, "Epica") {
 }
 
-bool ChapaCasco::alPisarMina(int& vidas, int& zapatos, int& dinero) {
+bool ChapaCasco::alPisarMina(int& vidas, int& zapatos, float& dinero) {
     return (rand() % 2 == 0);
 }
 
@@ -289,7 +289,7 @@ ChapaArsenal::ChapaArsenal()
     : Chapa(23, "Chapa Arsenal", "+2 Zapatos al inicio de cada ronda", 7, "Epica") {
 }
 
-void ChapaArsenal::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, int& dinero) {
+void ChapaArsenal::alIniciarRonda(int& vidas, int maxVidas, int& zapatos, float& dinero) {
     zapatos += 2;
 }
 
@@ -299,7 +299,7 @@ ChapaGeneral::ChapaGeneral()
     : Chapa(24, "Chapa General", "+1 Vida y +1 Zapato al superar cada ronda", 10, "Legendaria") {
 }
 
-void ChapaGeneral::alSuperarRonda(int& vidas, int maxVidas, int& dinero, int& zapatos) {
+void ChapaGeneral::alSuperarRonda(int& vidas, int maxVidas, float& dinero, int& zapatos) {
     if (vidas < maxVidas) {
         vidas += 1;
     }
@@ -312,8 +312,8 @@ ChapaMidas::ChapaMidas()
     : Chapa(25, "Chapa Midas", "+1 Moneda extra por cada casilla destapada", 9, "Legendaria") {
 }
 
-void ChapaMidas::alDestapar(int& dinero, int& zapatos, int minasCerca, int cantCascada) {
-    dinero += 1 + cantCascada;
+void ChapaMidas::alDestapar(float& dinero, int& zapatos, int minasCerca, int cantCascada) {
+    dinero += 1.0f + cantCascada;
 }
 
 Chapa* ChapaMidas::clonar() const { return new ChapaMidas(*this); }

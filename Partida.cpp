@@ -6,7 +6,7 @@
 
 Partida::Partida(const string& dif)
     : vidas(3), maxVidas(3), ronda(1), maxRondas(10),
-      puntajeTotal(0), dinero(0), zapatos(1), costoZapato(3), zapatosRestantesTienda(5),
+      puntajeTotal(0), dinero(0.0f), zapatos(1), costoZapato(3), zapatosRestantesTienda(5),
       contadorTienda(0), tiendaDisponible(false), enTienda(false), dificultad(dif),
       catalogoChapas(nullptr), cantCatalogo(25), cantTienda(3) {
     for (int i = 0; i < 3; i++) tiendaActual[i] = nullptr;
@@ -103,7 +103,7 @@ void Partida::nuevaPartida(const string& dif) {
     vidas = maxVidas;
     ronda = 1;
     puntajeTotal = 0;
-    dinero = 0;
+    dinero = 0.0f;
     zapatos = 1;
     contadorTienda = 0;
     tiendaDisponible = false;
@@ -133,7 +133,8 @@ bool Partida::jugarCelda(int fila, int col) {
 
     int minasCerca = 0;
     int cascada = 0;
-    int resultado = tablero.destapar(fila, col, minasCerca, cascada);
+    int cascadaConNumero = 0;
+    int resultado = tablero.destapar(fila, col, minasCerca, cascada, cascadaConNumero);
 
     if (resultado == 0) return false;
 
@@ -152,7 +153,8 @@ bool Partida::jugarCelda(int fila, int col) {
     }
 
     int resueltas = 1 + cascada;
-    dinero += resueltas;
+    int conNumero = (minasCerca > 0 ? 1 : 0) + cascadaConNumero;
+    dinero += conNumero * 0.5f;
     puntajeTotal += resueltas * 10;
 
     for (int i = 0; i < inventario.getCantidad(); i++) {
@@ -174,13 +176,14 @@ int Partida::usarZapato(int fila, int col) {
 
     int minasCerca = 0;
     int seguras = 0;
-    int res = tablero.tirarZapato(fila, col, minasCerca, seguras);
+    int segurasConNumero = 0;
+    int res = tablero.tirarZapato(fila, col, minasCerca, seguras, segurasConNumero);
     if (res == -1) return -1;
 
     zapatos--;
 
     if (seguras > 0) {
-        dinero += seguras;
+        dinero += segurasConNumero * 0.5f;
         puntajeTotal += seguras * 10;
         if (!tiendaDisponible) {
             contadorTienda += seguras;
@@ -222,7 +225,7 @@ bool Partida::equiparChapa(Chapa* chapa) {
 bool Partida::venderChapa(int indice) {
     Chapa* c = inventario.getChapa(indice);
     if (c == nullptr) return false;
-    int reembolso = c->getCosto() / 2;
+    float reembolso = c->getCosto() * 0.5f;
     if (inventario.quitar(indice)) {
         dinero += reembolso;
         return true;
@@ -337,7 +340,8 @@ bool Partida::cargarPartida(const string& rutaArchivo) {
     if (!archivo.is_open()) return false;
 
     string dif;
-    int r = 1, v = 3, din = 0, zap = 1, pt = 0, contT = 0, tiendaDisp = 0;
+    int r = 1, v = 3, zap = 1, pt = 0, contT = 0, tiendaDisp = 0;
+    float din = 0.0f;
     if (!getline(archivo, dif)) return false;
     if (!(archivo >> r >> v >> din >> zap >> pt >> contT >> tiendaDisp)) return false;
 
@@ -347,7 +351,7 @@ bool Partida::cargarPartida(const string& rutaArchivo) {
     nuevaPartida(dif);
     ronda = (r < 1) ? 1 : (r > maxRondas ? maxRondas : r);
     vidas = (v < 1) ? 1 : (v > maxVidas ? maxVidas : v);
-    dinero = (din < 0) ? 0 : din;
+    dinero = (din < 0.0f) ? 0.0f : din;
     zapatos = (zap < 0) ? 0 : zap;
     puntajeTotal = (pt < 0) ? 0 : pt;
     contadorTienda = (contT < 0) ? 0 : contT;
@@ -397,7 +401,7 @@ int Partida::getVidas() const { return vidas; }
 int Partida::getRonda() const { return ronda; }
 int Partida::getMaxRondas() const { return maxRondas; }
 int Partida::getPuntajeTotal() const { return puntajeTotal; }
-int Partida::getDinero() const { return dinero; }
+float Partida::getDinero() const { return dinero; }
 int Partida::getZapatos() const { return zapatos; }
 int Partida::getCostoZapato() const { return costoZapato; }
 int Partida::getZapatosRestantesTienda() const { return zapatosRestantesTienda; }

@@ -28,7 +28,7 @@ private:
     int ronda;
     int maxRondas;
     int puntajeTotal;
-    int dinero;
+    float dinero;
     int zapatos;
     int costoZapato;
     int zapatosRestantesTienda;
@@ -86,7 +86,7 @@ public:
     int getRonda() const;
     int getMaxRondas() const;
     int getPuntajeTotal() const;
-    int getDinero() const;
+    float getDinero() const;
     int getZapatos() const;
     int getCostoZapato() const;
     int getZapatosRestantesTienda() const;

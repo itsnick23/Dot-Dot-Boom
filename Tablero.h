@@ -22,7 +22,7 @@ private:
     bool tableroConexo(int inicioFila, int inicioCol) const;
     void colocarMinas(int seguraFila, int seguraCol);
     void contarMinasVecinas();
-    int expandirCascada(int fila, int col, int& sumaMinasCerca);
+    int expandirCascada(int fila, int col, int& celdasConNumero);
 
 public:
     Tablero(int filas = 8, int columnas = 8, int minas = 10);
@@ -32,10 +32,9 @@ public:
     void reiniciar();
 
     // devuelve cuantas celdas abrio, -1 si hay mina, 0 si no hizo nada
-    int destapar(int fila, int col, int& ultimaMinaCerca, int& celdasCascada);
-    int destapar(Coord pos, int& ultimaMinaCerca, int& celdasCascada);
-    // -1 si no se pudo tirar, 0 si no habia mina (revela solo esa), >=1 si habia mina (revela 3x3 y devuelve cuantas seguras abrio + 1)
-    int tirarZapato(int fila, int col, int& minasCerca, int& segurasReveladas);
+    int destapar(int fila, int col, int& ultimaMinaCerca, int& celdasCascada, int& cascadaConNumero);
+    int destapar(Coord pos, int& ultimaMinaCerca, int& celdasCascada, int& cascadaConNumero);
+    int tirarZapato(int fila, int col, int& minasCerca, int& segurasReveladas, int& segurasConNumero);
 
     void alternarBandera(int fila, int col);
 
