@@ -4,15 +4,15 @@
 #include <cstdio>
 #include <cstdlib>
 
-Partida::Partida(const string& dif)
+Partida::Partida()
     : vidas(3), maxVidas(3), ronda(1), maxRondas(10),
       puntajeTotal(0), dinero(0.0f), zapatos(1), costoZapato(3), zapatosRestantesTienda(5),
-      contadorTienda(0), tiendaDisponible(false), enTienda(false), dificultad(dif),
+      contadorTienda(0), tiendaDisponible(false), enTienda(false),
       catalogoChapas(nullptr), cantCatalogo(25), cantTienda(3) {
     for (int i = 0; i < 3; i++) tiendaActual[i] = nullptr;
 
     inicializarCatalogo();
-    nuevaPartida(dif);
+    nuevaPartida();
 }
 
 Partida::~Partida() {
@@ -98,8 +98,7 @@ void Partida::generarTienda() {
     }
 }
 
-void Partida::nuevaPartida(const string& dif) {
-    dificultad = dif;
+void Partida::nuevaPartida() {
     vidas = maxVidas;
     ronda = 1;
     puntajeTotal = 0;
@@ -115,11 +114,6 @@ void Partida::nuevaPartida(const string& dif) {
 void Partida::iniciarSiguienteRonda() {
     int minas = 7 + (ronda - 1) * 2;
     int tam = 5 + (ronda - 1) * 2;
-    if (dificultad == "Dificil") {
-        minas += 2;
-    } else if (dificultad == "Facil" && minas > 5) {
-        minas -= 2;
-    }
 
     tablero.configurar(tam, tam, minas);
     for (int i = 0; i < inventario.getCantidad(); i++) {
@@ -323,7 +317,6 @@ bool Partida::guardarPartida(const string& rutaArchivo) const {
     ofstream archivo(rutaArchivo);
     if (!archivo.is_open()) return false;
 
-    archivo << dificultad << "\n";
     archivo << ronda << " " << vidas << " " << dinero << " " << zapatos << " "
             << puntajeTotal << " " << contadorTienda << " " << (tiendaDisponible ? 1 : 0) << "\n";
     archivo << inventario.getCantidad();
@@ -339,16 +332,14 @@ bool Partida::cargarPartida(const string& rutaArchivo) {
     ifstream archivo(rutaArchivo);
     if (!archivo.is_open()) return false;
 
-    string dif;
     int r = 1, v = 3, zap = 1, pt = 0, contT = 0, tiendaDisp = 0;
     float din = 0.0f;
-    if (!getline(archivo, dif)) return false;
     if (!(archivo >> r >> v >> din >> zap >> pt >> contT >> tiendaDisp)) return false;
 
     int cant = 0;
     if (!(archivo >> cant)) cant = 0;
 
-    nuevaPartida(dif);
+    nuevaPartida();
     ronda = (r < 1) ? 1 : (r > maxRondas ? maxRondas : r);
     vidas = (v < 1) ? 1 : (v > maxVidas ? maxVidas : v);
     dinero = (din < 0.0f) ? 0.0f : din;

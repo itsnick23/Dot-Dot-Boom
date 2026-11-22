@@ -175,7 +175,7 @@ void jugar(Partida& p) {
 }
 
 int main() {
-    Partida p("Normal");
+    Partida p;
     int opcion = 0;
 
     while (true) {
@@ -189,13 +189,7 @@ int main() {
         if (!(cin >> opcion)) break;
 
         if (opcion == 1) {
-            cout << "Dificultad (1: Facil, 2: Normal, 3: Dificil): ";
-            int d = 2;
-            cin >> d;
-            string dif = "Normal";
-            if (d == 1) dif = "Facil";
-            else if (d == 3) dif = "Dificil";
-            p.nuevaPartida(dif);
+            p.nuevaPartida();
             jugar(p);
         } else if (opcion == 2) {
             if (p.cargarPartida("partida.txt")) {

@@ -35,7 +35,6 @@ private:
     int contadorTienda;
     bool tiendaDisponible;
     bool enTienda;
-    string dificultad;
 
     Inventario inventario;
 
@@ -49,10 +48,10 @@ private:
     void generarTienda();
 
 public:
-    Partida(const string& dificultad = "Normal");
+    Partida();
     ~Partida();
 
-    void nuevaPartida(const string& dificultad);
+    void nuevaPartida();
     void iniciarSiguienteRonda();
 
     bool jugarCelda(int fila, int col);
