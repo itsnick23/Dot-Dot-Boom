@@ -1,4 +1,4 @@
 -std=c++20
+-IC:/Users/luzum/tools/SFML-3.1.0/include
 -IC:/Users/USER/tools/SFML-3.1.0/include
--IC:/Users/USER/tools/mingw64/include/c++/14.2.0
--IC:/Users/USER/tools/mingw64/include/c++/14.2.0/x86_64-w64-mingw32
+-I"C:/Program Files/CodeBlocks/MinGW/include"
