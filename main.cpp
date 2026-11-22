@@ -157,6 +157,53 @@ void dibujarBotonONOFF(sf::RenderWindow& window, float x, float y, bool estado) 
     window.draw(btnOff);
 }
 
+// --- ESTRUCTURA Y CÁLCULO UNIFICADO DE LA GEOMETRÍA DEL TABLERO ---
+struct GeometriaTablero {
+    int filas;
+    int columnas;
+    float cellSize;
+    float cellPad;
+    float gridW;
+    float gridH;
+    float startX;
+    float startY;
+
+    // Retorna true y calcula f, c si las coordenadas (mx, my) caen dentro de una casilla válida
+    bool obtenerCelda(float mx, float my, int& fOut, int& cOut) const {
+        if (mx < startX || mx >= startX + gridW || my < startY || my >= startY + gridH) {
+            return false;
+        }
+        int c = static_cast<int>((mx - startX) / cellSize);
+        int f = static_cast<int>((my - startY) / cellSize);
+        if (f >= 0 && f < filas && c >= 0 && c < columnas) {
+            float localX = mx - (startX + c * cellSize);
+            float localY = my - (startY + f * cellSize);
+            if (localX <= cellSize - cellPad && localY <= cellSize - cellPad) {
+                fOut = f;
+                cOut = c;
+                return true;
+            }
+        }
+        return false;
+    }
+};
+
+GeometriaTablero calcularGeometriaTablero(const Tablero& tablero) {
+    GeometriaTablero g;
+    g.filas = tablero.getFilas();
+    g.columnas = tablero.getColumnas();
+    g.cellPad = 3.f;
+    float maxW = 780.f;
+    float maxH = 430.f;
+    g.cellSize = std::floor(std::min(maxW / g.columnas, maxH / g.filas));
+    if (g.cellSize < 16.f) g.cellSize = 16.f;
+    g.gridW = g.columnas * g.cellSize;
+    g.gridH = g.filas * g.cellSize;
+    g.startX = 220.f + (maxW - g.gridW) / 2.0f;
+    g.startY = 70.f + (maxH - g.gridH) / 2.0f;
+    return g;
+}
+
 int main() {
     ConfiguracionJuego config;
     config.fps = 60; config.anchoPantalla = 1024; config.altoPantalla = 576;
@@ -369,65 +416,51 @@ int main() {
                             colorMensaje = sf::Color(220, 240, 255);
                         }
                     } else if (!partida.estaTerminada()) {
-                        // Clics sobre el tablero de celdas
-                        const Tablero& tablero = partida.getTablero();
-                        int fCount = tablero.getFilas();
-                        int cCount = tablero.getColumnas();
-                        float cellPad = 3.f;
-                        float maxW = 540.f, maxH = 410.f;
-                        float cellSize = std::floor(std::min(maxW / cCount, maxH / fCount));
-                        float gridW = cCount * cellSize;
-                        float gridH = fCount * cellSize;
-                        float startX = 220.f + (maxW - gridW) / 2.0f;
-                        float startY = 70.f + (maxH - gridH) / 2.0f;
-
-                        for (int f = 0; f < fCount; f++) {
-                            for (int c = 0; c < cCount; c++) {
-                                sf::FloatRect cellRect({startX + c * cellSize, startY + f * cellSize}, {cellSize - cellPad, cellSize - cellPad});
-                                if (cellRect.contains(mousePos)) {
-                                    if (mouseButton->button == sf::Mouse::Button::Left) {
-                                        if (modoZapato) {
-                                            if (partida.getZapatos() > 0) {
-                                                int res = partida.usarZapato(f, c);
-                                                if (res == 1) {
-                                                    mensajeEstado = "¡ZAPATO DESACTIVÓ UNA MINA!";
-                                                    colorMensaje = sf::Color(255, 215, 0);
-                                                } else if (res == 0) {
-                                                    mensajeEstado = "Zona limpia revelada con el zapato.";
-                                                    colorMensaje = sf::Color(100, 255, 120);
-                                                } else {
-                                                    mensajeEstado = "No se pudo usar el zapato en esta celda.";
-                                                    colorMensaje = sf::Color(255, 150, 150);
-                                                }
-                                                modoZapato = false;
-                                            } else {
-                                                mensajeEstado = "No te quedan zapatos disponibles.";
-                                                colorMensaje = sf::Color(255, 100, 100);
-                                                modoZapato = false;
-                                            }
+                        // Clics sobre el tablero de celdas utilizando la misma geometría unificada
+                        GeometriaTablero geo = calcularGeometriaTablero(partida.getTablero());
+                        int f = -1, c = -1;
+                        if (geo.obtenerCelda(mousePos.x, mousePos.y, f, c)) {
+                            if (mouseButton->button == sf::Mouse::Button::Left) {
+                                if (modoZapato) {
+                                    if (partida.getZapatos() > 0) {
+                                        int res = partida.usarZapato(f, c);
+                                        if (res == 1) {
+                                            mensajeEstado = "¡ZAPATO DESACTIVÓ UNA MINA!";
+                                            colorMensaje = sf::Color(255, 215, 0);
+                                        } else if (res == 0) {
+                                            mensajeEstado = "Zona limpia revelada con el zapato.";
+                                            colorMensaje = sf::Color(100, 255, 120);
                                         } else {
-                                            int vidasAntes = partida.getVidas();
-                                            bool ok = partida.jugarCelda(f, c);
-                                            if (ok) {
-                                                if (partida.getVidas() < vidasAntes) {
-                                                    mensajeEstado = "¡BOOM! Has pisado una mina. Vidas: " + std::to_string(partida.getVidas());
-                                                    colorMensaje = sf::Color(255, 80, 80);
-                                                    if (config.screenShake) temporizadorShake = 0.35f;
-                                                } else {
-                                                    mensajeEstado = "Casilla segura descubierta.";
-                                                    colorMensaje = sf::Color(180, 220, 255);
-                                                }
-                                            }
+                                            mensajeEstado = "No se pudo usar el zapato en esta celda.";
+                                            colorMensaje = sf::Color(255, 150, 150);
                                         }
-                                        // Verificar si la partida terminó
-                                        if (partida.estaTerminada()) {
-                                            estadoActual = 4;
-                                            puntajeGuardado = false;
+                                        modoZapato = false;
+                                    } else {
+                                        mensajeEstado = "No te quedan zapatos disponibles.";
+                                        colorMensaje = sf::Color(255, 100, 100);
+                                        modoZapato = false;
+                                    }
+                                } else {
+                                    int vidasAntes = partida.getVidas();
+                                    bool ok = partida.jugarCelda(f, c);
+                                    if (ok) {
+                                        if (partida.getVidas() < vidasAntes) {
+                                            mensajeEstado = "¡BOOM! Has pisado una mina. Vidas: " + std::to_string(partida.getVidas());
+                                            colorMensaje = sf::Color(255, 80, 80);
+                                            if (config.screenShake) temporizadorShake = 0.35f;
+                                        } else {
+                                            mensajeEstado = "Casilla segura descubierta.";
+                                            colorMensaje = sf::Color(180, 220, 255);
                                         }
-                                    } else if (mouseButton->button == sf::Mouse::Button::Right) {
-                                        partida.marcarCelda(f, c);
                                     }
                                 }
+                                // Verificar si la partida terminó
+                                if (partida.estaTerminada()) {
+                                    estadoActual = 4;
+                                    puntajeGuardado = false;
+                                }
+                            } else if (mouseButton->button == sf::Mouse::Button::Right) {
+                                partida.marcarCelda(f, c);
                             }
                         }
                     }
@@ -467,12 +500,12 @@ int main() {
                             }
                         }
 
-                        // Botones Vender Chapas del Inventario (Columna Derecha)
+                        // Botones Vender Chapas del Inventario (Columna Derecha, sincronizados exactamente con el dibujo)
                         for (int i = 0; i < partida.getCantChapas(); i++) {
                             Chapa* ch = partida.getChapaEquipada(i);
                             if (ch == nullptr) continue;
-                            float invCardY = 140.f + i * 62.f;
-                            sf::FloatRect btnVenderChapa({830.f, invCardY + 12.f}, {95.f, 32.f});
+                            float invY = 135.f + i * 62.f;
+                            sf::FloatRect btnVenderChapa({815.f, invY + 11.f}, {105.f, 32.f});
                             if (btnVenderChapa.contains(mousePos)) {
                                 std::string nom = ch->getNombre();
                                 float val = ch->getCosto() * 0.5f;
@@ -795,16 +828,9 @@ int main() {
             // DIBUJAR EL TABLERO CENTRAL
             // ==========================================
             const Tablero& tablero = partida.getTablero();
-            int fCount = tablero.getFilas();
-            int cCount = tablero.getColumnas();
-            float cellPad = 3.f;
-            float maxW = 780.f, maxH = 430.f;
-            float cellSize = std::floor(std::min(maxW / cCount, maxH / fCount));
-            if (cellSize < 16.f) cellSize = 16.f;
-            float gridW = cCount * cellSize;
-            float gridH = fCount * cellSize;
-            float startX = 220.f + (maxW - gridW) / 2.0f;
-            float startY = 70.f + (maxH - gridH) / 2.0f;
+            GeometriaTablero geo = calcularGeometriaTablero(tablero);
+            float startX = geo.startX;
+            float startY = geo.startY;
 
             // Efecto Screen Shake al pisar mina
             if (temporizadorShake > 0.0f) {
@@ -813,30 +839,33 @@ int main() {
             }
 
             // Fondo marco del tablero
-            sf::RectangleShape marcoTablero({gridW + 16.f, gridH + 16.f});
+            sf::RectangleShape marcoTablero({geo.gridW + 16.f, geo.gridH + 16.f});
             marcoTablero.setPosition({startX - 8.f, startY - 8.f});
             marcoTablero.setFillColor(sf::Color(12, 14, 22));
             marcoTablero.setOutlineThickness(3.f);
             marcoTablero.setOutlineColor(modoZapato ? sf::Color(220, 160, 40) : sf::Color(50, 65, 95));
             window.draw(marcoTablero);
 
-            for (int f = 0; f < fCount; f++) {
-                for (int c = 0; c < cCount; c++) {
+            int hoverFila = -1, hoverCol = -1;
+            geo.obtenerCelda(mousePos.x, mousePos.y, hoverFila, hoverCol);
+
+            for (int f = 0; f < geo.filas; f++) {
+                for (int c = 0; c < geo.columnas; c++) {
                     const Celda& cel = tablero.getCelda(f, c);
-                    sf::FloatRect cRect({startX + c * cellSize, startY + f * cellSize}, {cellSize - cellPad, cellSize - cellPad});
-                    bool hoverC = cRect.contains(mousePos);
+                    sf::FloatRect cRect({startX + c * geo.cellSize, startY + f * geo.cellSize}, {geo.cellSize - geo.cellPad, geo.cellSize - geo.cellPad});
+                    bool hoverC = (f == hoverFila && c == hoverCol);
 
                     if (!cel.estaRevelada()) {
                         if (cel.estaMarcada()) {
                             // Bandera
-                            sf::RectangleShape bg({cellSize - cellPad, cellSize - cellPad});
+                            sf::RectangleShape bg({geo.cellSize - geo.cellPad, geo.cellSize - geo.cellPad});
                             bg.setPosition(cRect.position);
                             bg.setFillColor(hoverC ? sf::Color(200, 140, 30) : sf::Color(170, 110, 20));
                             bg.setOutlineThickness(1.f);
                             bg.setOutlineColor(sf::Color(255, 215, 0));
                             window.draw(bg);
 
-                            sf::Text txtP(fontTitulo, "P", static_cast<unsigned int>(cellSize * 0.65f));
+                            sf::Text txtP(fontTitulo, "P", static_cast<unsigned int>(geo.cellSize * 0.65f));
                             txtP.setFillColor(sf::Color::White);
                             centrarTexto(txtP, cRect.position.x + cRect.size.x / 2.f, cRect.position.y + cRect.size.y / 2.f);
                             window.draw(txtP);
@@ -848,17 +877,17 @@ int main() {
                     } else {
                         // Casilla Revelada
                         if (cel.esMina()) {
-                            sf::RectangleShape bgMina({cellSize - cellPad, cellSize - cellPad});
+                            sf::RectangleShape bgMina({geo.cellSize - geo.cellPad, geo.cellSize - geo.cellPad});
                             bgMina.setPosition(cRect.position);
                             bgMina.setFillColor(sf::Color(200, 40, 40));
                             window.draw(bgMina);
 
-                            sf::Text txtM(fontTitulo, "*", static_cast<unsigned int>(cellSize * 0.9f));
+                            sf::Text txtM(fontTitulo, "*", static_cast<unsigned int>(geo.cellSize * 0.9f));
                             txtM.setFillColor(sf::Color::White);
                             centrarTexto(txtM, cRect.position.x + cRect.size.x / 2.f, cRect.position.y + cRect.size.y / 2.f);
                             window.draw(txtM);
                         } else {
-                            sf::RectangleShape bgSegura({cellSize - cellPad, cellSize - cellPad});
+                            sf::RectangleShape bgSegura({geo.cellSize - geo.cellPad, geo.cellSize - geo.cellPad});
                             bgSegura.setPosition(cRect.position);
                             bgSegura.setFillColor(sf::Color(25, 30, 42));
                             bgSegura.setOutlineThickness(1.f);
@@ -867,7 +896,7 @@ int main() {
 
                             int mc = cel.getMinasCerca();
                             if (mc > 0) {
-                                sf::Text txtNum(fontTitulo, std::to_string(mc), static_cast<unsigned int>(cellSize * 0.65f));
+                                sf::Text txtNum(fontTitulo, std::to_string(mc), static_cast<unsigned int>(geo.cellSize * 0.65f));
                                 txtNum.setFillColor(colorNumeroMinas(mc));
                                 centrarTexto(txtNum, cRect.position.x + cRect.size.x / 2.f, cRect.position.y + cRect.size.y / 2.f);
                                 window.draw(txtNum);
