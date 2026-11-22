@@ -159,7 +159,7 @@ void jugar(Partida& p) {
     }
 
     if (p.partidaGanada()) {
-        cout << "\n=== VICTORIA! Sobreviviste las 10 rondas ===\n";
+        cout << "\n=== VICTORIA! Llegaste a la ronda 10 ===\n";
     } else {
         cout << "\n=== FIN DEL JUEGO! Ronda alcanzada: " << p.getRonda() << " ===\n";
     }

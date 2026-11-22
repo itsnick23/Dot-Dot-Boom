@@ -207,7 +207,7 @@ void Partida::cobrarRonda() {
         inventario.getChapa(i)->alSuperarRonda(vidas, maxVidas, dinero, zapatos);
     }
     ronda++;
-    if (ronda <= maxRondas) {
+    if (ronda < maxRondas) {
         iniciarSiguienteRonda();
     }
 }
@@ -366,7 +366,7 @@ bool Partida::borrarPartida(const string& rutaArchivo) const {
 }
 
 bool Partida::estaTerminada() const { return vidas <= 0 || partidaGanada(); }
-bool Partida::partidaGanada() const { return ronda > maxRondas || (ronda == maxRondas && rondaSuperada()); }
+bool Partida::partidaGanada() const { return ronda >= maxRondas; }
 bool Partida::rondaSuperada() const { return tablero.estaCompletado(); }
 bool Partida::puedeAbrirTienda() const { return tiendaDisponible; }
 bool Partida::estaEnTienda() const { return enTienda; }
