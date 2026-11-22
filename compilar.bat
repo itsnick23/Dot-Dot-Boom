@@ -34,7 +34,7 @@ if "%SFML%"=="" (
 
 if not exist src mkdir src
 
-:: Copiar DLLs necesarias
+:: Copiar DLLs necesarias a src
 if exist "%SFML%\bin" (
     copy /Y "%SFML%\bin\sfml-*-3.dll" src >nul 2>nul
 )
@@ -53,4 +53,4 @@ if errorlevel 1 (
 
 echo Compilacion exitosa: src\DotDotBoom.exe
 
-if not "%1"=="nojugar" start "" /D src src\DotDotBoom.exe
+if not "%1"=="nojugar" start "" /D . src\DotDotBoom.exe

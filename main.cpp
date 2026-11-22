@@ -434,40 +434,58 @@ int main() {
                 }
 
                 // ==========================================
-                // 3: TIENDA TÁCTICA
+                // 3: TIENDA TÁCTICA (COMPRA Y VENTA)
                 // ==========================================
                 else if (estadoActual == 3) {
                     if (mouseButton->button == sf::Mouse::Button::Left) {
-                        // Botón Comprar Zapato
-                        sf::FloatRect btnCompZapato({670.f, 150.f}, {150.f, 40.f});
+                        // Botón Comprar Zapato (Columna Izquierda)
+                        sf::FloatRect btnCompZapato({465.f, 142.f}, {115.f, 36.f});
                         if (btnCompZapato.contains(mousePos)) {
                             if (partida.comprarZapato()) {
                                 mensajeEstado = "¡Zapato comprado!";
                                 colorMensaje = sf::Color(100, 255, 100);
                             } else {
-                                mensajeEstado = "No se pudo comprar el zapato (fondos insuficientes o limite).";
+                                mensajeEstado = "No se pudo comprar (fondos insuficientes o limite).";
                                 colorMensaje = sf::Color(255, 100, 100);
                             }
                         }
 
-                        // Botones Comprar Chapas (3 slots)
+                        // Botones Comprar Chapas (Columna Izquierda, 3 slots)
                         for (int i = 0; i < partida.getCantTienda(); i++) {
                             Chapa* ch = partida.getChapaTienda(i);
                             if (ch == nullptr) continue;
-                            sf::FloatRect btnCompChapa({670.f, 215.f + i * 85.f}, {150.f, 38.f});
+                            float cardY = 195.f + i * 85.f;
+                            sf::FloatRect btnCompChapa({465.f, cardY + 20.f}, {115.f, 36.f});
                             if (btnCompChapa.contains(mousePos)) {
                                 if (partida.comprarChapa(ch->getId())) {
                                     mensajeEstado = "¡Compraste " + ch->getNombre() + "!";
                                     colorMensaje = sf::Color(255, 215, 0);
                                 } else {
-                                    mensajeEstado = "No tienes monedas suficientes o tu inventario esta lleno.";
+                                    mensajeEstado = "No tienes dinero suficiente o tu inventario esta lleno.";
                                     colorMensaje = sf::Color(255, 100, 100);
                                 }
                             }
                         }
 
+                        // Botones Vender Chapas del Inventario (Columna Derecha)
+                        for (int i = 0; i < partida.getCantChapas(); i++) {
+                            Chapa* ch = partida.getChapaEquipada(i);
+                            if (ch == nullptr) continue;
+                            float invCardY = 140.f + i * 62.f;
+                            sf::FloatRect btnVenderChapa({830.f, invCardY + 12.f}, {95.f, 32.f});
+                            if (btnVenderChapa.contains(mousePos)) {
+                                std::string nom = ch->getNombre();
+                                float val = ch->getCosto() * 0.5f;
+                                if (partida.venderChapa(i)) {
+                                    mensajeEstado = "Vendiste " + nom + " por $" + formatearDinero(val);
+                                    colorMensaje = sf::Color(100, 255, 120);
+                                    break;
+                                }
+                            }
+                        }
+
                         // Botón Salir de la Tienda
-                        sf::FloatRect btnSalirTienda({412.f, 500.f}, {200.f, 45.f});
+                        sf::FloatRect btnSalirTienda({412.f, 498.f}, {200.f, 42.f});
                         if (btnSalirTienda.contains(mousePos)) {
                             partida.cerrarTienda();
                             estadoActual = 1;
@@ -924,98 +942,164 @@ int main() {
         }
 
         // ------------------------------------------
-        // ESTADO 3: TIENDA TÁCTICA
+        // ESTADO 3: TIENDA TÁCTICA (COMPRA Y VENTA)
         // ------------------------------------------
         else if (estadoActual == 3) {
-            sf::RectangleShape tiendaFondo({880.f, 510.f});
-            tiendaFondo.setPosition({72.f, 33.f});
+            sf::RectangleShape tiendaFondo({910.f, 520.f});
+            tiendaFondo.setPosition({57.f, 28.f});
             tiendaFondo.setFillColor(sf::Color(18, 24, 38));
             tiendaFondo.setOutlineThickness(3.f);
             tiendaFondo.setOutlineColor(sf::Color(50, 150, 90));
             window.draw(tiendaFondo);
 
-            sf::Text tTienda(fontTitulo, "TIENDA TACTICA DE SUMINISTROS", 30);
+            sf::Text tTienda(fontTitulo, "TIENDA TACTICA DE SUMINISTROS", 28);
             tTienda.setFillColor(sf::Color(255, 215, 0));
-            centrarTexto(tTienda, 512.f, 65.f);
+            centrarTexto(tTienda, 512.f, 58.f);
             window.draw(tTienda);
 
-            sf::Text tSaldo(fontTitulo, "Tus Monedas: $" + formatearDinero(partida.getDinero()), 22);
+            sf::Text tSaldo(fontTitulo, "Tus Monedas: $" + formatearDinero(partida.getDinero()), 20);
             tSaldo.setFillColor(sf::Color(90, 240, 120));
-            centrarTexto(tSaldo, 512.f, 105.f);
+            centrarTexto(tSaldo, 512.f, 88.f);
             window.draw(tSaldo);
 
+            // Cabeceras de Columna
+            sf::Text tColVenta(fontTitulo, "-- ARTICULOS EN VENTA --", 16);
+            tColVenta.setFillColor(sf::Color(200, 215, 240));
+            centrarTexto(tColVenta, 340.f, 118.f);
+            window.draw(tColVenta);
+
+            sf::Text tColInv(fontTitulo, "-- TU INVENTARIO (" + std::to_string(partida.getCantChapas()) + "/5) --", 16);
+            tColInv.setFillColor(sf::Color(200, 215, 240));
+            centrarTexto(tColInv, 765.f, 118.f);
+            window.draw(tColInv);
+
+            // ====================================================
+            // COLUMNA IZQUIERDA: ARTÍCULOS EN VENTA
+            // ====================================================
             // Oferta de Zapato
-            sf::RectangleShape boxZapato({780.f, 55.f});
-            boxZapato.setPosition({122.f, 142.f});
+            sf::RectangleShape boxZapato({500.f, 50.f});
+            boxZapato.setPosition({80.f, 135.f});
             boxZapato.setFillColor(sf::Color(28, 35, 52));
             boxZapato.setOutlineThickness(1.5f);
             boxZapato.setOutlineColor(sf::Color(220, 160, 40));
             window.draw(boxZapato);
 
-            sf::Text tZInfo(fontTitulo, "Zapato Tactico Adicional (Disponibles: " + std::to_string(partida.getZapatosRestantesTienda()) + "/5)", 18);
+            sf::Text tZInfo(fontTitulo, "Zapato Tactico [Quedan: " + std::to_string(partida.getZapatosRestantesTienda()) + "/5]", 16);
             tZInfo.setFillColor(sf::Color(240, 240, 240));
-            alinearIzquierda(tZInfo, 145.f, 170.f);
+            alinearIzquierda(tZInfo, 95.f, 160.f);
             window.draw(tZInfo);
 
-            sf::Text tZCosto(fontTitulo, "$" + formatearDinero(static_cast<float>(partida.getCostoZapato())), 20);
+            sf::Text tZCosto(fontTitulo, "$" + formatearDinero(static_cast<float>(partida.getCostoZapato())), 18);
             tZCosto.setFillColor(sf::Color(90, 240, 120));
-            alinearDerecha(tZCosto, 650.f, 170.f);
+            alinearDerecha(tZCosto, 455.f, 160.f);
             window.draw(tZCosto);
 
-            sf::FloatRect btnCompZapato({670.f, 150.f}, {150.f, 40.f});
+            sf::FloatRect btnCompZapato({465.f, 142.f}, {105.f, 36.f});
             bool puedeCompZ = partida.getDinero() >= partida.getCostoZapato() && partida.getZapatosRestantesTienda() > 0;
             dibujarBoton3D(window, btnCompZapato, btnCompZapato.contains(mousePos), puedeCompZ ? sf::Color(60, 140, 70) : sf::Color(50, 55, 65));
-            sf::Text tBtnCZ(fontTitulo, "COMPRAR", 16);
-            centrarTexto(tBtnCZ, 745.f, 170.f);
+            sf::Text tBtnCZ(fontTitulo, "COMPRAR", 14);
+            centrarTexto(tBtnCZ, 517.f, 160.f);
             window.draw(tBtnCZ);
 
-            // Ofertas de Chapas
+            // Ofertas de Chapas (3 tarjetas)
             for (int i = 0; i < partida.getCantTienda(); i++) {
                 Chapa* ch = partida.getChapaTienda(i);
-                float cardY = 210.f + i * 85.f;
+                float cardY = 195.f + i * 85.f;
 
-                sf::RectangleShape boxChapa({780.f, 75.f});
-                boxChapa.setPosition({122.f, cardY});
+                sf::RectangleShape boxChapa({500.f, 75.f});
+                boxChapa.setPosition({80.f, cardY});
                 boxChapa.setFillColor(sf::Color(25, 32, 48));
                 boxChapa.setOutlineThickness(1.5f);
                 boxChapa.setOutlineColor(ch != nullptr ? colorRareza(ch->getRareza()) : sf::Color(60, 60, 70));
                 window.draw(boxChapa);
 
                 if (ch != nullptr) {
-                    sf::Text tNom(fontTitulo, ch->getNombre() + " [" + ch->getRareza() + "]", 18);
+                    sf::Text tNom(fontTitulo, ch->getNombre() + " [" + ch->getRareza() + "]", 16);
                     tNom.setFillColor(colorRareza(ch->getRareza()));
-                    alinearIzquierda(tNom, 145.f, cardY + 22.f);
+                    alinearIzquierda(tNom, 95.f, cardY + 20.f);
                     window.draw(tNom);
 
-                    sf::Text tDesc(fontTitulo, ch->getDescripcion(), 14);
+                    sf::Text tDesc(fontTitulo, ch->getDescripcion(), 12);
                     tDesc.setFillColor(sf::Color(200, 210, 230));
-                    alinearIzquierda(tDesc, 145.f, cardY + 50.f);
+                    alinearIzquierda(tDesc, 95.f, cardY + 50.f);
                     window.draw(tDesc);
 
-                    sf::Text tPrecio(fontTitulo, "$" + formatearDinero(static_cast<float>(ch->getCosto())), 20);
+                    sf::Text tPrecio(fontTitulo, "$" + formatearDinero(static_cast<float>(ch->getCosto())), 18);
                     tPrecio.setFillColor(sf::Color(90, 240, 120));
-                    alinearDerecha(tPrecio, 650.f, cardY + 37.f);
+                    alinearDerecha(tPrecio, 455.f, cardY + 38.f);
                     window.draw(tPrecio);
 
-                    sf::FloatRect btnCompChapa({670.f, cardY + 18.f}, {150.f, 38.f});
+                    sf::FloatRect btnCompChapa({465.f, cardY + 20.f}, {105.f, 36.f});
                     bool puedeComp = partida.getDinero() >= ch->getCosto() && !partida.getInventario().estaLleno();
                     dibujarBoton3D(window, btnCompChapa, btnCompChapa.contains(mousePos), puedeComp ? sf::Color(60, 140, 70) : sf::Color(50, 55, 65));
-                    sf::Text tBtnC(fontTitulo, "COMPRAR", 16);
-                    centrarTexto(tBtnC, 745.f, cardY + 37.f);
+                    sf::Text tBtnC(fontTitulo, "COMPRAR", 14);
+                    centrarTexto(tBtnC, 517.f, cardY + 38.f);
                     window.draw(tBtnC);
                 } else {
-                    sf::Text tAgotado(fontTitulo, "(Articulo adquirido)", 18);
+                    sf::Text tAgotado(fontTitulo, "(Articulo Adquirido)", 16);
                     tAgotado.setFillColor(sf::Color(100, 110, 130));
-                    centrarTexto(tAgotado, 512.f, cardY + 37.f);
+                    centrarTexto(tAgotado, 330.f, cardY + 37.f);
                     window.draw(tAgotado);
                 }
             }
 
+            // ====================================================
+            // COLUMNA DERECHA: TU INVENTARIO (VENTA)
+            // ====================================================
+            for (int i = 0; i < 5; i++) {
+                float invY = 135.f + i * 62.f;
+                sf::RectangleShape boxInv({325.f, 54.f});
+                boxInv.setPosition({605.f, invY});
+
+                if (i < partida.getCantChapas()) {
+                    Chapa* ch = partida.getChapaEquipada(i);
+                    boxInv.setFillColor(sf::Color(28, 35, 52));
+                    boxInv.setOutlineThickness(1.5f);
+                    boxInv.setOutlineColor(colorRareza(ch->getRareza()));
+                    window.draw(boxInv);
+
+                    sf::Text tNomInv(fontTitulo, ch->getNombre(), 14);
+                    tNomInv.setFillColor(colorRareza(ch->getRareza()));
+                    alinearIzquierda(tNomInv, 618.f, invY + 18.f);
+                    window.draw(tNomInv);
+
+                    sf::Text tRarInv(fontTitulo, ch->getRareza(), 11);
+                    tRarInv.setFillColor(sf::Color(150, 160, 180));
+                    alinearIzquierda(tRarInv, 618.f, invY + 36.f);
+                    window.draw(tRarInv);
+
+                    // Botón Vender (+50% del costo)
+                    float reembolso = ch->getCosto() * 0.5f;
+                    sf::FloatRect btnVenderChapa({815.f, invY + 11.f}, {105.f, 32.f});
+                    bool hoverV = btnVenderChapa.contains(mousePos);
+                    dibujarBoton3D(window, btnVenderChapa, hoverV, sf::Color(150, 60, 50));
+                    sf::Text tBtnV(fontTitulo, "+$" + formatearDinero(reembolso), 13);
+                    centrarTexto(tBtnV, 867.f, invY + 27.f);
+                    window.draw(tBtnV);
+                } else {
+                    boxInv.setFillColor(sf::Color(22, 26, 38, 120));
+                    boxInv.setOutlineThickness(1.f);
+                    boxInv.setOutlineColor(sf::Color(45, 50, 65));
+                    window.draw(boxInv);
+
+                    sf::Text tVacio(fontTitulo, "[Ranura Vacia]", 13);
+                    tVacio.setFillColor(sf::Color(90, 100, 120));
+                    centrarTexto(tVacio, 767.f, invY + 27.f);
+                    window.draw(tVacio);
+                }
+            }
+
+            // Notificación inferior
+            sf::Text tNotif(fontTitulo, mensajeEstado, 16);
+            tNotif.setFillColor(colorMensaje);
+            centrarTexto(tNotif, 512.f, 468.f);
+            window.draw(tNotif);
+
             // Botón Salir de la Tienda
-            sf::FloatRect btnSalirTienda({412.f, 500.f}, {200.f, 45.f});
-            dibujarBoton3D(window, btnSalirTienda, btnSalirTienda.contains(mousePos), sf::Color(150, 50, 50));
-            sf::Text tBtnST(fontTitulo, "VOLVER AL JUEGO", 18);
-            centrarTexto(tBtnST, 512.f, 522.f);
+            sf::FloatRect btnSalirTienda({412.f, 498.f}, {200.f, 42.f});
+            dibujarBoton3D(window, btnSalirTienda, btnSalirTienda.contains(mousePos), sf::Color(140, 50, 60));
+            sf::Text tBtnST(fontTitulo, "VOLVER AL JUEGO", 17);
+            centrarTexto(tBtnST, 512.f, 519.f);
             window.draw(tBtnST);
         }
 
