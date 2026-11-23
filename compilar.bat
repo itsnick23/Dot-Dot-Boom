@@ -28,7 +28,14 @@ if exist "%USERPROFILE%\tools\SFML-3.1.0" (
 )
 
 if "%SFML%"=="" (
-    echo [ERROR] No se encontro SFML 3.1.0 en las rutas estandar.
+    if exist "src\DotDotBoom.exe" (
+        echo [INFO] No se detecto SFML o MinGW para recompilar en esta computadora.
+        echo Sin embargo, el juego ya esta compilado. Iniciando Dot-Dot-Boom...
+        start "" /D . src\DotDotBoom.exe
+        exit /b 0
+    )
+    echo [ERROR] No se encontro SFML 3.1.0 ni un ejecutable previo.
+    pause
     exit /b 1
 )
 
@@ -48,6 +55,7 @@ echo Compilando Dot-Dot-Boom con SFML...
 g++ -std=c++20 Celda.cpp Chapa.cpp Inventario.cpp Tablero.cpp Partida.cpp main.cpp -o src\DotDotBoom.exe -I"%SFML%\include" -L"%SFML%\lib" -lsfml-graphics -lsfml-window -lsfml-system -lsfml-audio
 if errorlevel 1 (
     echo [ERROR] Fallo la compilacion.
+    pause
     exit /b 1
 )
 
