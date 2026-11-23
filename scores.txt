@@ -1,5 +1,7 @@
 Comandante|10|1850
 Capitan|8|1320
 Teniente|6|890
+cosa12|2|640
 Sargento|4|540
 Cabo|2|210
+
