@@ -6,7 +6,7 @@
 
 Partida::Partida()
     : vidas(3), maxVidas(3), ronda(1), maxRondas(10),
-      puntajeTotal(0), dinero(0.0f), zapatos(1), costoZapato(3), zapatosRestantesTienda(5),
+      dinero(0.0f), zapatos(1), costoZapato(3), zapatosRestantesTienda(5),
       contadorTienda(0), tiendaDisponible(false), enTienda(false),
       catalogoChapas(nullptr), cantCatalogo(25), cantTienda(3) {
     for (int i = 0; i < 3; i++) tiendaActual[i] = nullptr;
@@ -101,7 +101,6 @@ void Partida::generarTienda() {
 void Partida::nuevaPartida() {
     vidas = maxVidas;
     ronda = 1;
-    puntajeTotal = 0;
     dinero = 0.0f;
     zapatos = 1;
     contadorTienda = 0;
@@ -112,8 +111,8 @@ void Partida::nuevaPartida() {
 }
 
 void Partida::iniciarSiguienteRonda() {
-    int minas = 7 + (ronda - 1) * 2;
     int tam = 5 + (ronda - 1) * 2;
+    int minas = (ronda == 1) ? 7 : (tam * tam * 19) / 100;
 
     tablero.configurar(tam, tam, minas);
     for (int i = 0; i < inventario.getCantidad(); i++) {
@@ -132,6 +131,13 @@ bool Partida::jugarCelda(int fila, int col) {
 
     if (resultado == 0) return false;
 
+    if (!tiendaDisponible) {
+        contadorTienda += 1;
+        if (contadorTienda >= 5) {
+            tiendaDisponible = true;
+        }
+    }
+
     if (resultado == -1) {
         bool bloqueada = false;
         for (int i = 0; i < inventario.getCantidad(); i++) {
@@ -146,20 +152,11 @@ bool Partida::jugarCelda(int fila, int col) {
         return true;
     }
 
-    int resueltas = 1 + cascada;
     int conNumero = (minasCerca > 0 ? 1 : 0) + cascadaConNumero;
     dinero += conNumero * 0.5f;
-    puntajeTotal += resueltas * 10;
 
     for (int i = 0; i < inventario.getCantidad(); i++) {
         inventario.getChapa(i)->alDestapar(dinero, zapatos, minasCerca, cascada);
-    }
-
-    if (!tiendaDisponible) {
-        contadorTienda += resueltas;
-        if (contadorTienda >= 5) {
-            tiendaDisponible = true;
-        }
     }
 
     return true;
@@ -175,16 +172,15 @@ int Partida::usarZapato(int fila, int col) {
     if (res == -1) return -1;
 
     zapatos--;
+    if (!tiendaDisponible) {
+        contadorTienda += 1;
+        if (contadorTienda >= 5) {
+            tiendaDisponible = true;
+        }
+    }
 
     if (seguras > 0) {
         dinero += segurasConNumero * 0.5f;
-        puntajeTotal += seguras * 10;
-        if (!tiendaDisponible) {
-            contadorTienda += seguras;
-            if (contadorTienda >= 5) {
-                tiendaDisponible = true;
-            }
-        }
         if (res == 0) {
             for (int i = 0; i < inventario.getCantidad(); i++) {
                 inventario.getChapa(i)->alDestapar(dinero, zapatos, minasCerca, 0);
@@ -202,7 +198,6 @@ void Partida::marcarCelda(int fila, int col) {
 
 void Partida::cobrarRonda() {
     if (!rondaSuperada() || partidaGanada()) return;
-    puntajeTotal += ronda * 100;
     for (int i = 0; i < inventario.getCantidad(); i++) {
         inventario.getChapa(i)->alSuperarRonda(vidas, maxVidas, dinero, zapatos);
     }
@@ -271,109 +266,12 @@ Chapa* Partida::buscarChapa(const string& nombre) const {
     return nullptr;
 }
 
-bool Partida::guardarPuntaje(const string& rutaArchivo, const string& nombreJugador) const {
-    // 1. Leer todos los registros existentes (sin límite de maxRegistros para no perder ninguno)
-    const int MAX_TEMP = 200;
-    RegistroPuntaje temp[MAX_TEMP];
-    int cant = 0;
-
-    {
-        ifstream leer(rutaArchivo);
-        string linea;
-        while (cant < MAX_TEMP && getline(leer, linea)) {
-            if (linea.empty()) continue;
-            istringstream iss(linea);
-            string parteNombre, parteRonda, partePuntaje;
-            if (getline(iss, parteNombre, '|') &&
-                getline(iss, parteRonda, '|') &&
-                getline(iss, partePuntaje)) {
-                try {
-                    temp[cant].nombre  = parteNombre;
-                    temp[cant].ronda   = stoi(parteRonda);
-                    temp[cant].puntaje = stoi(partePuntaje);
-                    cant++;
-                } catch (...) { /* línea mal formada, se ignora */ }
-            }
-        }
-    }
-
-    // 2. Agregar el nuevo registro
-    if (cant < MAX_TEMP) {
-        string limpio = nombreJugador.empty() ? "Soldado" : nombreJugador;
-        temp[cant].nombre  = limpio;
-        temp[cant].ronda   = ronda;
-        temp[cant].puntaje = puntajeTotal;
-        cant++;
-    }
-
-    // 3. Ordenar de mayor a menor puntaje (bubble sort)
-    for (int i = 0; i < cant - 1; i++) {
-        for (int j = 0; j < cant - 1 - i; j++) {
-            if (temp[j].puntaje < temp[j + 1].puntaje) {
-                RegistroPuntaje aux = temp[j];
-                temp[j] = temp[j + 1];
-                temp[j + 1] = aux;
-            }
-        }
-    }
-
-    // 4. Reescribir el archivo completo con solo el top 10
-    ofstream archivo(rutaArchivo); // sin ios::app → sobreescribe
-    if (!archivo.is_open()) return false;
-
-    int toWrite = cant < 10 ? cant : 10;
-    for (int i = 0; i < toWrite; i++) {
-        archivo << temp[i].nombre << "|" << temp[i].ronda << "|" << temp[i].puntaje << "\n";
-    }
-    archivo.close();
-    return true;
-}
-
-int Partida::cargarPuntajes(const string& rutaArchivo, RegistroPuntaje* lista, int maxRegistros) const {
-    if (lista == nullptr || maxRegistros <= 0) return 0;
-
-    ifstream archivo(rutaArchivo);
-    if (!archivo.is_open()) return 0;
-
-    int cantidad = 0;
-    string linea;
-    while (cantidad < maxRegistros && getline(archivo, linea)) {
-        if (linea.empty()) continue;
-        istringstream iss(linea);
-        string parteNombre, parteRonda, partePuntaje;
-        if (getline(iss, parteNombre, '|') &&
-            getline(iss, parteRonda, '|') &&
-            getline(iss, partePuntaje)) {
-            try {
-                lista[cantidad].nombre  = parteNombre;
-                lista[cantidad].ronda   = stoi(parteRonda);
-                lista[cantidad].puntaje = stoi(partePuntaje);
-                cantidad++;
-            } catch (...) { /* línea mal formada, se ignora */ }
-        }
-    }
-    archivo.close();
-
-    // El archivo ya viene ordenado, pero re-ordenamos por si acaso
-    for (int i = 0; i < cantidad - 1; i++) {
-        for (int j = 0; j < cantidad - 1 - i; j++) {
-            if (lista[j].puntaje < lista[j + 1].puntaje) {
-                RegistroPuntaje aux = lista[j];
-                lista[j] = lista[j + 1];
-                lista[j + 1] = aux;
-            }
-        }
-    }
-
-    return cantidad;
-}
-
 bool Partida::guardarPartida(const string& rutaArchivo) const {
     ofstream archivo(rutaArchivo);
     if (!archivo.is_open()) return false;
 
     archivo << ronda << " " << vidas << " " << dinero << " " << zapatos << " "
-            << puntajeTotal << " " << contadorTienda << " " << (tiendaDisponible ? 1 : 0) << "\n";
+            << contadorTienda << " " << (tiendaDisponible ? 1 : 0) << "\n";
     archivo << inventario.getCantidad();
     for (int i = 0; i < inventario.getCantidad(); i++) {
         archivo << " " << inventario.getChapa(i)->getId();
@@ -387,9 +285,9 @@ bool Partida::cargarPartida(const string& rutaArchivo) {
     ifstream archivo(rutaArchivo);
     if (!archivo.is_open()) return false;
 
-    int r = 1, v = 3, zap = 1, pt = 0, contT = 0, tiendaDisp = 0;
+    int r = 1, v = 3, zap = 1, contT = 0, tiendaDisp = 0;
     float din = 0.0f;
-    if (!(archivo >> r >> v >> din >> zap >> pt >> contT >> tiendaDisp)) return false;
+    if (!(archivo >> r >> v >> din >> zap >> contT >> tiendaDisp)) return false;
 
     int cant = 0;
     if (!(archivo >> cant)) cant = 0;
@@ -399,7 +297,6 @@ bool Partida::cargarPartida(const string& rutaArchivo) {
     vidas = (v < 1) ? 1 : (v > maxVidas ? maxVidas : v);
     dinero = (din < 0.0f) ? 0.0f : din;
     zapatos = (zap < 0) ? 0 : zap;
-    puntajeTotal = (pt < 0) ? 0 : pt;
     contadorTienda = (contT < 0) ? 0 : contT;
     tiendaDisponible = (tiendaDisp == 1);
 
@@ -446,7 +343,6 @@ void Partida::cerrarTienda() {
 int Partida::getVidas() const { return vidas; }
 int Partida::getRonda() const { return ronda; }
 int Partida::getMaxRondas() const { return maxRondas; }
-int Partida::getPuntajeTotal() const { return puntajeTotal; }
 float Partida::getDinero() const { return dinero; }
 int Partida::getZapatos() const { return zapatos; }
 int Partida::getCostoZapato() const { return costoZapato; }

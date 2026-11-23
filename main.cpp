@@ -1,4 +1,5 @@
 #include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp>
 #include <optional>
 #include <cmath>
 #include <vector>
@@ -8,6 +9,7 @@
 #include <sstream>
 #include <fstream>
 #include "Partida.h"
+#include "musica_embebida.h"
 
 // --- BACKEND: ESTRUCTURA DE CONFIGURACIÓN ---
 struct ConfiguracionJuego {
@@ -207,6 +209,7 @@ GeometriaTablero calcularGeometriaTablero(const Tablero& tablero) {
 int main() {
     ConfiguracionJuego config;
     config.fps = 60; config.anchoPantalla = 1024; config.altoPantalla = 576;
+    config.pantallaCompleta = false;
     config.volMaster = 8; config.volMusica = 6; config.volEfectos = 9; config.estereo = true;
     config.screenShake = true; config.intensidadShake = 6;
     config.idioma = "Spanish"; config.dificultad = "Normal";
@@ -214,6 +217,8 @@ int main() {
     sf::State estadoVentana = sf::State::Windowed; 
     sf::RenderWindow window(sf::VideoMode({static_cast<unsigned int>(config.anchoPantalla), static_cast<unsigned int>(config.altoPantalla)}), "Dot Dot Boom", sf::Style::Default, estadoVentana);
     window.setFramerateLimit(config.fps);
+    sf::View vistaJuego({512.f, 288.f}, {1024.f, 576.f});
+    window.setView(vistaJuego);
 
     sf::Font fontTitulo;
     if (!fontTitulo.openFromFile("C:/Windows/Fonts/consola.ttf")) {
@@ -230,8 +235,9 @@ int main() {
     sf::Color colorMensaje = sf::Color(200, 220, 255);
     float temporizadorMensaje = 0.0f;
     float temporizadorShake = 0.0f;
-    std::string nombreJugadorInput = "Soldado";
-    bool puntajeGuardado = false;
+
+    sf::Music musica;
+    int pistaActual = -1;
 
     // Estados del juego:
     // 0: Menú Principal
@@ -239,18 +245,16 @@ int main() {
     // 2: Opciones
     // 3: Tienda Táctica
     // 4: Fin de Juego / Victoria
-    // 5: Ranking
     int estadoActual = 0; 
     int pestanaActual = 0; // 0: Graficos, 1: Audio, 2: Controles, 3: Gameplay
     sf::Clock reloj;
     sf::Clock deltaClock;
 
     // Botones del Menú Principal
-    sf::FloatRect btnJugar({412.f, 220.f}, {200.f, 50.f});
-    sf::FloatRect btnCargar({412.f, 280.f}, {200.f, 50.f});
-    sf::FloatRect btnRanking({412.f, 340.f}, {200.f, 50.f});
-    sf::FloatRect btnOpciones({412.f, 400.f}, {200.f, 50.f});
-    sf::FloatRect btnSalir({412.f, 460.f}, {200.f, 50.f});
+    sf::FloatRect btnJugar({412.f, 240.f}, {200.f, 50.f});
+    sf::FloatRect btnCargar({412.f, 305.f}, {200.f, 50.f});
+    sf::FloatRect btnOpciones({412.f, 370.f}, {200.f, 50.f});
+    sf::FloatRect btnSalir({412.f, 435.f}, {200.f, 50.f});
 
     // Pestañas Opciones
     float pestanaX = 50.f; float pestanaY = 150.f; float pestanaAlto = 80.f; float pestanaAncho = 160.f;
@@ -289,21 +293,31 @@ int main() {
         if (temporizadorMensaje > 0.0f) temporizadorMensaje -= dt;
         if (temporizadorShake > 0.0f) temporizadorShake -= dt;
 
+        // Musica de Gambonanza segun la pantalla
+        int pistaDeseada = 0;
+        if (estadoActual == 1) pistaDeseada = 1;
+        else if (estadoActual == 3) pistaDeseada = 2;
+
+        if (pistaDeseada != pistaActual) {
+            musica.stop();
+            bool cargo = false;
+            if (pistaDeseada == 0) cargo = musica.openFromMemory(MUSICA_MENU, MUSICA_MENU_LEN);
+            else if (pistaDeseada == 1) cargo = musica.openFromMemory(MUSICA_JUEGO, MUSICA_JUEGO_LEN);
+            else if (pistaDeseada == 2) cargo = musica.openFromMemory(MUSICA_TIENDA, MUSICA_TIENDA_LEN);
+            if (cargo) {
+                musica.setLooping(true);
+                musica.play();
+            }
+            pistaActual = pistaDeseada;
+        }
+        musica.setVolume(static_cast<float>(config.volMaster * config.volMusica));
+
         while (const std::optional event = window.pollEvent()) {
             if (event->is<sf::Event::Closed>()) {
                 window.close();
             }
-
-            // --- ENTRADA DE TEXTO (Para guardar nombre en Fin de Juego) ---
-            if (estadoActual == 4 && !puntajeGuardado) {
-                if (const auto* textEvent = event->getIf<sf::Event::TextEntered>()) {
-                    char32_t c = textEvent->unicode;
-                    if (c == 8) { // Backspace
-                        if (!nombreJugadorInput.empty()) nombreJugadorInput.pop_back();
-                    } else if (c >= 32 && c < 127 && nombreJugadorInput.length() < 12) {
-                        nombreJugadorInput += static_cast<char>(c);
-                    }
-                }
+            if (event->is<sf::Event::Resized>()) {
+                window.setView(vistaJuego);
             }
 
             // --- TECLAS RÁPIDAS ---
@@ -322,7 +336,7 @@ int main() {
                         partida.cerrarTienda();
                         estadoActual = 1;
                     }
-                } else if (estadoActual == 2 || estadoActual == 5) {
+                } else if (estadoActual == 2) {
                     if (keyEvent->code == sf::Keyboard::Key::Escape) {
                         estadoActual = 0;
                     }
@@ -360,9 +374,6 @@ int main() {
                                 colorMensaje = sf::Color(255, 120, 120);
                                 temporizadorMensaje = 2.5f;
                             }
-                        }
-                        else if (btnRanking.contains(mousePos)) {
-                            estadoActual = 5;
                         }
                         else if (btnOpciones.contains(mousePos)) {
                             estadoActual = 2;
@@ -456,8 +467,8 @@ int main() {
                                 }
                                 // Verificar si la partida terminó
                                 if (partida.estaTerminada()) {
+                                    partida.borrarPartida("partida.txt");
                                     estadoActual = 4;
-                                    puntajeGuardado = false;
                                 }
                             } else if (mouseButton->button == sf::Mouse::Button::Right) {
                                 partida.marcarCelda(f, c);
@@ -531,19 +542,10 @@ int main() {
                 // ==========================================
                 else if (estadoActual == 4) {
                     if (mouseButton->button == sf::Mouse::Button::Left) {
-                        sf::FloatRect btnGuardarRec({540.f, 340.f}, {160.f, 45.f});
-                        sf::FloatRect btnReintentar({310.f, 430.f}, {180.f, 50.f});
-                        sf::FloatRect btnIrMenu({530.f, 430.f}, {180.f, 50.f});
+                        sf::FloatRect btnReintentar({310.f, 340.f}, {180.f, 50.f});
+                        sf::FloatRect btnIrMenu({530.f, 340.f}, {180.f, 50.f});
 
-                        if (!puntajeGuardado && btnGuardarRec.contains(mousePos)) {
-                            std::string nom = nombreJugadorInput.empty() ? "Soldado" : nombreJugadorInput;
-                            partida.guardarPuntaje("scores.txt", nom);
-                            partida.borrarPartida("partida.txt");
-                            puntajeGuardado = true;
-                            mensajeEstado = "Puntaje registrado con exito.";
-                            colorMensaje = sf::Color(100, 255, 120);
-                        }
-                        else if (btnReintentar.contains(mousePos)) {
+                        if (btnReintentar.contains(mousePos)) {
                             partida.nuevaPartida();
                             partidaActiva = true;
                             modoZapato = false;
@@ -555,16 +557,6 @@ int main() {
                             partidaActiva = false;
                             estadoActual = 0;
                         }
-                    }
-                }
-
-                // ==========================================
-                // 5: RANKING
-                // ==========================================
-                else if (estadoActual == 5) {
-                    sf::FloatRect btnVolverRank({412.f, 490.f}, {200.f, 45.f});
-                    if (mouseButton->button == sf::Mouse::Button::Left && btnVolverRank.contains(mousePos)) {
-                        estadoActual = 0;
                     }
                 }
 
@@ -589,14 +581,25 @@ int main() {
                             if (clickFPSMas.contains(mousePos) && config.fps < 240) { config.fps += 30; window.setFramerateLimit(config.fps); }
                             if (clickFPSMenos.contains(mousePos) && config.fps > 30) { config.fps -= 30; window.setFramerateLimit(config.fps); }
                             
-                            if (clickResMas.contains(mousePos) || clickResMenos.contains(mousePos)) {
+                            if (clickResMas.contains(mousePos)) {
                                 if (config.anchoPantalla == 1024) { config.anchoPantalla = 1280; config.altoPantalla = 720; }
                                 else if (config.anchoPantalla == 1280) { config.anchoPantalla = 1600; config.altoPantalla = 900; }
                                 else { config.anchoPantalla = 1024; config.altoPantalla = 576; }
-                                
+
                                 sf::State nuevoEstado = config.pantallaCompleta ? sf::State::Fullscreen : sf::State::Windowed;
                                 window.create(sf::VideoMode({static_cast<unsigned int>(config.anchoPantalla), static_cast<unsigned int>(config.altoPantalla)}), "Dot Dot Boom", sf::Style::Default, nuevoEstado);
                                 window.setFramerateLimit(config.fps);
+                                window.setView(vistaJuego);
+                            }
+                            if (clickResMenos.contains(mousePos)) {
+                                if (config.anchoPantalla == 1600) { config.anchoPantalla = 1280; config.altoPantalla = 720; }
+                                else if (config.anchoPantalla == 1280) { config.anchoPantalla = 1024; config.altoPantalla = 576; }
+                                else { config.anchoPantalla = 1600; config.altoPantalla = 900; }
+
+                                sf::State nuevoEstado = config.pantallaCompleta ? sf::State::Fullscreen : sf::State::Windowed;
+                                window.create(sf::VideoMode({static_cast<unsigned int>(config.anchoPantalla), static_cast<unsigned int>(config.altoPantalla)}), "Dot Dot Boom", sf::Style::Default, nuevoEstado);
+                                window.setFramerateLimit(config.fps);
+                                window.setView(vistaJuego);
                             }
                         }
                         // Pestaña Audio
@@ -665,13 +668,6 @@ int main() {
             centrarTexto(txtCargar, 512.f, btnCargar.position.y + 25.f);
             window.draw(txtCargar);
 
-            // Botón Ranking
-            bool hoverR = btnRanking.contains(mousePos);
-            dibujarBoton3D(window, btnRanking, hoverR, sf::Color(150, 120, 40));
-            sf::Text txtRanking(fontTitulo, "RANKING / RECORDS", 22);
-            centrarTexto(txtRanking, 512.f, btnRanking.position.y + 25.f);
-            window.draw(txtRanking);
-
             // Botón Opciones
             bool hoverO = btnOpciones.contains(mousePos);
             dibujarBoton3D(window, btnOpciones, hoverO, sf::Color(70, 75, 120));
@@ -731,12 +727,6 @@ int main() {
             txtZapatos.setFillColor(sf::Color(230, 160, 50));
             alinearIzquierda(txtZapatos, 620.f, 28.f);
             window.draw(txtZapatos);
-
-            // 5. Puntos
-            sf::Text txtPts(fontTitulo, "PTS: " + std::to_string(partida.getPuntajeTotal()), 22);
-            txtPts.setFillColor(sf::Color(240, 240, 240));
-            alinearDerecha(txtPts, 995.f, 28.f);
-            window.draw(txtPts);
 
             // Panel Izquierdo de Acciones
             sf::RectangleShape panelLateral({190.f, 505.f});
@@ -1149,103 +1139,23 @@ int main() {
             centrarTexto(tSub, 512.f, 155.f);
             window.draw(tSub);
 
-            sf::Text tRes(fontTitulo, "Puntaje Final: " + std::to_string(partida.getPuntajeTotal()) + " PTS   |   Monedas: $" + formatearDinero(partida.getDinero()), 22);
+            sf::Text tRes(fontTitulo, "Monedas restantes: $" + formatearDinero(partida.getDinero()), 22);
             tRes.setFillColor(sf::Color(100, 240, 140));
-            centrarTexto(tRes, 512.f, 210.f);
+            centrarTexto(tRes, 512.f, 230.f);
             window.draw(tRes);
 
-            // Caja de Entrada de Nombre para el Ranking
-            sf::Text tPide(fontTitulo, "Ingresa tu nombre para el Registro de Honor:", 18);
-            tPide.setFillColor(sf::Color(220, 220, 220));
-            centrarTexto(tPide, 512.f, 290.f);
-            window.draw(tPide);
-
-            sf::RectangleShape boxNombre({200.f, 45.f});
-            boxNombre.setPosition({320.f, 340.f});
-            boxNombre.setFillColor(sf::Color(30, 35, 55));
-            boxNombre.setOutlineThickness(2.f);
-            boxNombre.setOutlineColor(puntajeGuardado ? sf::Color(80, 160, 90) : sf::Color(255, 215, 0));
-            window.draw(boxNombre);
-
-            sf::Text txtNomIn(fontTitulo, nombreJugadorInput + (puntajeGuardado ? "" : "_"), 20);
-            txtNomIn.setFillColor(sf::Color::White);
-            centrarTexto(txtNomIn, 420.f, 362.f);
-            window.draw(txtNomIn);
-
-            sf::FloatRect btnGuardarRec({540.f, 340.f}, {160.f, 45.f});
-            dibujarBoton3D(window, btnGuardarRec, btnGuardarRec.contains(mousePos), puntajeGuardado ? sf::Color(50, 60, 70) : sf::Color(50, 140, 80));
-            sf::Text txtBtnGR(fontTitulo, puntajeGuardado ? "GUARDADO" : "GUARDAR", 18);
-            centrarTexto(txtBtnGR, 620.f, 362.f);
-            window.draw(txtBtnGR);
-
             // Botones Reintentar y Menú
-            sf::FloatRect btnReintentar({310.f, 430.f}, {180.f, 50.f});
+            sf::FloatRect btnReintentar({310.f, 340.f}, {180.f, 50.f});
             dibujarBoton3D(window, btnReintentar, btnReintentar.contains(mousePos), sf::Color(50, 120, 180));
             sf::Text txtReint(fontTitulo, "JUGAR DE NUEVO", 18);
-            centrarTexto(txtReint, 400.f, 455.f);
+            centrarTexto(txtReint, 400.f, 365.f);
             window.draw(txtReint);
 
-            sf::FloatRect btnIrMenu({530.f, 430.f}, {180.f, 50.f});
+            sf::FloatRect btnIrMenu({530.f, 340.f}, {180.f, 50.f});
             dibujarBoton3D(window, btnIrMenu, btnIrMenu.contains(mousePos), sf::Color(140, 50, 60));
             sf::Text txtMenu(fontTitulo, "MENU PRINCIPAL", 18);
-            centrarTexto(txtMenu, 620.f, 455.f);
+            centrarTexto(txtMenu, 620.f, 365.f);
             window.draw(txtMenu);
-        }
-
-        // ------------------------------------------
-        // ESTADO 5: RANKING
-        // ------------------------------------------
-        else if (estadoActual == 5) {
-            sf::RectangleShape rankFondo({740.f, 460.f});
-            rankFondo.setPosition({142.f, 40.f});
-            rankFondo.setFillColor(sf::Color(16, 22, 35));
-            rankFondo.setOutlineThickness(3.f);
-            rankFondo.setOutlineColor(sf::Color(220, 180, 40));
-            window.draw(rankFondo);
-
-            sf::Text tTitRank(fontTitulo, "SALON DE LA FAMA - TOP REGISTROS", 28);
-            tTitRank.setFillColor(sf::Color(255, 215, 0));
-            centrarTexto(tTitRank, 512.f, 75.f);
-            window.draw(tTitRank);
-
-            RegistroPuntaje lista[10];
-            int cantReg = partida.cargarPuntajes("scores.txt", lista, 10);
-
-            if (cantReg == 0) {
-                sf::Text tVacio(fontTitulo, "Aun no hay registros en scores.txt.\nCompleta una partida para ingresar al salon.", 20);
-                tVacio.setFillColor(sf::Color(150, 160, 180));
-                centrarTexto(tVacio, 512.f, 250.f);
-                window.draw(tVacio);
-            } else {
-                for (int i = 0; i < cantReg; i++) {
-                    float yR = 120.f + i * 34.f;
-                    sf::Text tPuesto(fontTitulo, "#" + std::to_string(i + 1), 18);
-                    tPuesto.setFillColor(i == 0 ? sf::Color(255, 215, 0) : (i == 1 ? sf::Color(200, 200, 210) : sf::Color(170, 130, 80)));
-                    alinearIzquierda(tPuesto, 180.f, yR);
-                    window.draw(tPuesto);
-
-                    sf::Text tNom(fontTitulo, lista[i].nombre, 18);
-                    tNom.setFillColor(sf::Color::White);
-                    alinearIzquierda(tNom, 270.f, yR);
-                    window.draw(tNom);
-
-                    sf::Text tRonda(fontTitulo, "Ronda " + std::to_string(lista[i].ronda), 18);
-                    tRonda.setFillColor(sf::Color(140, 200, 255));
-                    alinearIzquierda(tRonda, 540.f, yR);
-                    window.draw(tRonda);
-
-                    sf::Text tPunt(fontTitulo, std::to_string(lista[i].puntaje) + " pts", 18);
-                    tPunt.setFillColor(sf::Color(100, 255, 120));
-                    alinearDerecha(tPunt, 820.f, yR);
-                    window.draw(tPunt);
-                }
-            }
-
-            sf::FloatRect btnVolverRank({412.f, 490.f}, {200.f, 45.f});
-            dibujarBoton3D(window, btnVolverRank, btnVolverRank.contains(mousePos), sf::Color(140, 50, 60));
-            sf::Text tVR(fontTitulo, "VOLVER", 20);
-            centrarTexto(tVR, 512.f, 512.f);
-            window.draw(tVR);
         }
 
         // ------------------------------------------
