@@ -1,6 +1,5 @@
-Comandante 10 1850
-Capitan 8 1320
-Teniente 6 890
-Sargento 4 540
-Cabo 2 210
-pe 1 160
+Comandante|10|1850
+Capitan|8|1320
+Teniente|6|890
+Sargento|4|540
+Cabo|2|210

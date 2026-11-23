@@ -272,11 +272,59 @@ Chapa* Partida::buscarChapa(const string& nombre) const {
 }
 
 bool Partida::guardarPuntaje(const string& rutaArchivo, const string& nombreJugador) const {
-    ofstream archivo(rutaArchivo, ios::app);
+    // 1. Leer todos los registros existentes (sin límite de maxRegistros para no perder ninguno)
+    const int MAX_TEMP = 200;
+    RegistroPuntaje temp[MAX_TEMP];
+    int cant = 0;
+
+    {
+        ifstream leer(rutaArchivo);
+        string linea;
+        while (cant < MAX_TEMP && getline(leer, linea)) {
+            if (linea.empty()) continue;
+            istringstream iss(linea);
+            string parteNombre, parteRonda, partePuntaje;
+            if (getline(iss, parteNombre, '|') &&
+                getline(iss, parteRonda, '|') &&
+                getline(iss, partePuntaje)) {
+                try {
+                    temp[cant].nombre  = parteNombre;
+                    temp[cant].ronda   = stoi(parteRonda);
+                    temp[cant].puntaje = stoi(partePuntaje);
+                    cant++;
+                } catch (...) { /* línea mal formada, se ignora */ }
+            }
+        }
+    }
+
+    // 2. Agregar el nuevo registro
+    if (cant < MAX_TEMP) {
+        string limpio = nombreJugador.empty() ? "Soldado" : nombreJugador;
+        temp[cant].nombre  = limpio;
+        temp[cant].ronda   = ronda;
+        temp[cant].puntaje = puntajeTotal;
+        cant++;
+    }
+
+    // 3. Ordenar de mayor a menor puntaje (bubble sort)
+    for (int i = 0; i < cant - 1; i++) {
+        for (int j = 0; j < cant - 1 - i; j++) {
+            if (temp[j].puntaje < temp[j + 1].puntaje) {
+                RegistroPuntaje aux = temp[j];
+                temp[j] = temp[j + 1];
+                temp[j + 1] = aux;
+            }
+        }
+    }
+
+    // 4. Reescribir el archivo completo con solo el top 10
+    ofstream archivo(rutaArchivo); // sin ios::app → sobreescribe
     if (!archivo.is_open()) return false;
 
-    string limpio = nombreJugador.empty() ? "Soldado" : nombreJugador;
-    archivo << limpio << " " << ronda << " " << puntajeTotal << "\n";
+    int toWrite = cant < 10 ? cant : 10;
+    for (int i = 0; i < toWrite; i++) {
+        archivo << temp[i].nombre << "|" << temp[i].ronda << "|" << temp[i].puntaje << "\n";
+    }
     archivo.close();
     return true;
 }
@@ -290,19 +338,26 @@ int Partida::cargarPuntajes(const string& rutaArchivo, RegistroPuntaje* lista, i
     int cantidad = 0;
     string linea;
     while (cantidad < maxRegistros && getline(archivo, linea)) {
+        if (linea.empty()) continue;
         istringstream iss(linea);
-        RegistroPuntaje reg;
-        if (iss >> reg.nombre >> reg.ronda >> reg.puntaje) {
-            lista[cantidad] = reg;
-            cantidad++;
+        string parteNombre, parteRonda, partePuntaje;
+        if (getline(iss, parteNombre, '|') &&
+            getline(iss, parteRonda, '|') &&
+            getline(iss, partePuntaje)) {
+            try {
+                lista[cantidad].nombre  = parteNombre;
+                lista[cantidad].ronda   = stoi(parteRonda);
+                lista[cantidad].puntaje = stoi(partePuntaje);
+                cantidad++;
+            } catch (...) { /* línea mal formada, se ignora */ }
         }
     }
     archivo.close();
 
-    // ordena de mayor a menor
+    // El archivo ya viene ordenado, pero re-ordenamos por si acaso
     for (int i = 0; i < cantidad - 1; i++) {
         for (int j = 0; j < cantidad - 1 - i; j++) {
-            if (lista[j + 1] < lista[j]) {
+            if (lista[j].puntaje < lista[j + 1].puntaje) {
                 RegistroPuntaje aux = lista[j];
                 lista[j] = lista[j + 1];
                 lista[j + 1] = aux;
